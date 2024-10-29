@@ -10,7 +10,7 @@ import java.net.http.HttpResponse
 
 private fun query(sti: String) = PdlClient::class.java.getResource(sti)!!.readText().replace(Regex("[\n\r]"), "")
 
-internal class PdlClient(
+class PdlClient(
     private val baseUrl: String,
     private val accessTokenClient: AzureTokenProvider,
     private val accessTokenScope: String,

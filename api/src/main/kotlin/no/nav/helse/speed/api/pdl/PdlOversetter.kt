@@ -1,13 +1,15 @@
 package no.nav.helse.speed.api.pdl
 
 import com.fasterxml.jackson.databind.JsonNode
+import no.nav.helse.speed.api.pdl.PdlIdenterResultat.FantIkkeIdenter
+import no.nav.helse.speed.api.pdl.PdlIdenterResultat.Identer
 import org.slf4j.LoggerFactory
 
 internal object PdlOversetter {
-    private val log = LoggerFactory.getLogger("pdl-oversetter")
+    private val log = LoggerFactory.getLogger(this::class.java)
     private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
 
-    fun oversetterIdenter(pdlReply: JsonNode): IdenterResultat {
+    fun oversetterIdenter(pdlReply: JsonNode): PdlIdenterResultat {
         håndterErrors(pdlReply)
         val pdlPerson = pdlReply["data"]["hentIdenter"]["identer"]
         fun identAvType(type: String): String {
@@ -21,7 +23,7 @@ internal object PdlOversetter {
         return try {
             Identer(identAvType("FOLKEREGISTERIDENT"), identAvType("AKTORID"))
         } catch (e: NoSuchElementException) {
-            FantIkkeIdenter()
+            FantIkkeIdenter
         }
     }
     fun oversetterAlleIdenter(pdlReply: JsonNode): Pair<Identer, List<Ident>> {
@@ -57,15 +59,17 @@ internal object PdlOversetter {
     }
 }
 
-internal interface IdenterResultat
-internal data class Identer(
-    val fødselsnummer: String,
-    val aktørId: String,
-    val npid: String? = null
-): IdenterResultat
-internal class FantIkkeIdenter: IdenterResultat
+sealed interface PdlIdenterResultat {
+    data class Identer(
+        val fødselsnummer: String,
+        val aktørId: String,
+        val npid: String? = null
+    ): PdlIdenterResultat
 
-internal sealed class Ident(val ident: String) {
+    data object FantIkkeIdenter: PdlIdenterResultat
+}
+
+sealed class Ident(val ident: String) {
     class Fødselsnummer(ident: String) : Ident(ident)
     class AktørId(ident: String) : Ident(ident)
     class NPID(ident: String) : Ident(ident)
