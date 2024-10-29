@@ -25,10 +25,15 @@ class Identtjeneste(
     }
 
     private fun hentFraMellomlager(ident: String): Identer? {
-        return jedisPool.resource.use { jedis ->
-            jedis.get(mellomlagringsnøkkel(ident))?.also {
-                logg.info("hentet identer fra mellomlager")
-            }?.let { objectMapper.readValue(it, Identer::class.java) }
+        return try {
+            jedisPool.resource.use { jedis ->
+                jedis.get(mellomlagringsnøkkel(ident))?.also {
+                    logg.info("hentet identer fra mellomlager")
+                }?.let { objectMapper.readValue(it, Identer::class.java) }
+            }
+        } catch (err: Exception) {
+            sikkerlogg.error("Kunne ikke koble til jedis, fall-backer til ingen cache: ${err.message}", err)
+            null
         }
     }
 
@@ -39,13 +44,19 @@ class Identtjeneste(
                 aktørId = identer.aktørId,
                 npid = identer.npid,
                 kilde = Kilde.PDL
-            ).also {
-                jedisPool.resource.use { jedis ->
-                    logg.info("lagrer pdl-svar i mellomlager")
-                    jedis.set(mellomlagringsnøkkel(ident), objectMapper.writeValueAsString(it.copy(kilde = Kilde.CACHE)), SetParams.setParams().ex(IDENT_EXPIRATION_SECONDS))
-                }
-            }
+            ).also { lagreTilMellomlager(ident, it) }
             is PdlIdenterResultat.FantIkkeIdenter -> FantIkkeIdenter
+        }
+    }
+
+    private fun lagreTilMellomlager(ident: String, resultat: Identer) {
+        try {
+            jedisPool.resource.use { jedis ->
+                logg.info("lagrer pdl-svar i mellomlager")
+                jedis.set(mellomlagringsnøkkel(ident), objectMapper.writeValueAsString(resultat.copy(kilde = Kilde.CACHE)), SetParams.setParams().ex(IDENT_EXPIRATION_SECONDS))
+            }
+        } catch (err: Exception) {
+            sikkerlogg.error("Kunne ikke koble til jedis, fall-backer til ingen cache: ${err.message}", err)
         }
     }
 

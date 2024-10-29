@@ -80,7 +80,7 @@ fun launchApp(env: Map<String, String>) {
     )
 
     val identtjeneste = Identtjeneste(jedisPool, pdlClient, objectmapper)
-    
+
     val app = embeddedServer(
         factory = CIO,
         environment = applicationEngineEnvironment {
