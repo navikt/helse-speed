@@ -52,4 +52,4 @@ spec:
     - name: KAFKA_CONSUMER_GROUP_ID
       value: {{consumerGroupId}}
     - name: KAFKA_RESET_POLICY
-      value: latest
+      value: LATEST
