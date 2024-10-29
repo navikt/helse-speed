@@ -36,8 +36,16 @@ spec:
     inbound:
       rules:
         - application: speed-async
+    outbound:
+      external:
+        - host: {{pdlHostname}}
   redis:
     - instance: mellomlager
       access: readwrite
   ingresses:
     - {{ingress}}
+  env:
+    - name: PDL_URL
+      value: https://{{pdlHostname}}/graphql
+    - name: PDL_SCOPE
+      value: {{pdlScope}}

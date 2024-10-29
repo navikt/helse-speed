@@ -1,3 +1,5 @@
 {
-  "ingress": "https://speed.ansatt.nav.no"
+  "ingress": "https://speed.ansatt.nav.no",
+  "pdlHostname": "pdl-api.prod-fss-pub.nais.io",
+  "pdlScope": "api://prod-fss.pdl.pdl-api/.default"
 }

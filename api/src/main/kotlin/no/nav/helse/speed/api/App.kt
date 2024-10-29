@@ -4,6 +4,7 @@ import com.auth0.jwk.JwkProviderBuilder
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.serialization.jackson.*
@@ -33,6 +34,7 @@ import io.prometheus.client.CollectorRegistry
 import io.prometheus.client.exporter.common.TextFormat
 import net.logstash.logback.argument.StructuredArguments.keyValue
 import net.logstash.logback.argument.StructuredArguments.v
+import no.nav.helse.speed.api.pdl.PdlClient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
@@ -59,6 +61,15 @@ fun launchApp(env: Map<String, String>) {
         jwkProvider = JwkProviderBuilder(URI(env.getValue("AZURE_OPENID_CONFIG_JWKS_URI")).toURL()).build(),
         issuer = env.getValue("AZURE_OPENID_CONFIG_ISSUER"),
         clientId = env.getValue("AZURE_APP_CLIENT_ID"),
+    )
+
+    val azureClient = createAzureTokenClientFromEnvironment(env)
+
+    val pdlClient = PdlClient(
+        baseUrl = env.getValue("PDL_URL"),
+        accessTokenClient = azureClient,
+        accessTokenScope = env.getValue("PDL_SCOPE"),
+        objectMapper = objectmapper
     )
 
     val app = embeddedServer(
