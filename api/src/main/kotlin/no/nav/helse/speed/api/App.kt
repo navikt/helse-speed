@@ -79,6 +79,8 @@ fun launchApp(env: Map<String, String>) {
         objectMapper = objectmapper
     )
 
+    val identtjeneste = Identtjeneste(jedisPool, pdlClient, objectmapper)
+    
     val app = embeddedServer(
         factory = CIO,
         environment = applicationEngineEnvironment {
@@ -88,7 +90,7 @@ fun launchApp(env: Map<String, String>) {
             })
             module {
                 authentication { azureApp.konfigurerJwtAuth(this) }
-                lagApplikasjonsmodul(objectmapper, CollectorRegistry.defaultRegistry)
+                lagApplikasjonsmodul(identtjeneste, objectmapper, CollectorRegistry.defaultRegistry)
             }
         }
     )
@@ -117,7 +119,7 @@ private fun lagJedistilkobling(env: Map<String, String>): JedisPool {
     return JedisPool(poolConfig, HostAndPort(uri.host, uri.port), config)
 }
 
-fun Application.lagApplikasjonsmodul(objectMapper: ObjectMapper, collectorRegistry: CollectorRegistry) {
+fun Application.lagApplikasjonsmodul(identtjeneste: Identtjeneste, objectMapper: ObjectMapper, collectorRegistry: CollectorRegistry) {
     val readyToggle = AtomicBoolean(false)
 
     environment.monitor.subscribe(ApplicationStarted) {
@@ -164,7 +166,7 @@ fun Application.lagApplikasjonsmodul(objectMapper: ObjectMapper, collectorRegist
     nais(readyToggle, collectorRegistry)
     routing {
         authenticate {
-            /* add routes */
+            api(identtjeneste)
         }
     }
 }
