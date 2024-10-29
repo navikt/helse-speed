@@ -1,6 +1,7 @@
 package no.nav.helse.speed.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.prometheus.client.Counter
 import no.nav.helse.speed.api.IdenterResultat.FantIkkeIdenter
 import no.nav.helse.speed.api.IdenterResultat.Identer
 import no.nav.helse.speed.api.IdenterResultat.Kilde
@@ -27,9 +28,10 @@ class Identtjeneste(
     private fun hentFraMellomlager(ident: String): Identer? {
         return try {
             jedisPool.resource.use { jedis ->
-                jedis.get(mellomlagringsnøkkel(ident))?.also {
-                    logg.info("hentet identer fra mellomlager")
-                }?.let { objectMapper.readValue(it, Identer::class.java) }
+                jedis.get(mellomlagringsnøkkel(ident))
+                    ?.also { logg.info("hentet identer fra mellomlager") }
+                    ?.let { objectMapper.readValue(it, Identer::class.java) }
+                    ?.also { cachebruk.labels("lese").inc() }
             }
         } catch (err: Exception) {
             sikkerlogg.error("Kunne ikke koble til jedis, fall-backer til ingen cache: ${err.message}", err)
@@ -55,6 +57,7 @@ class Identtjeneste(
                 logg.info("lagrer pdl-svar i mellomlager")
                 jedis.set(mellomlagringsnøkkel(ident), objectMapper.writeValueAsString(resultat.copy(kilde = Kilde.CACHE)), SetParams.setParams().ex(IDENT_EXPIRATION_SECONDS))
             }
+            cachebruk.labels("skrive").inc()
         } catch (err: Exception) {
             sikkerlogg.error("Kunne ikke koble til jedis, fall-backer til ingen cache: ${err.message}", err)
         }
@@ -74,6 +77,13 @@ class Identtjeneste(
 
         private val logg = LoggerFactory.getLogger(this::class.java)
         private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
+
+        private val cachebruk = Counter
+            .build()
+            .name("cachebruk")
+            .labelNames("operasjon")
+            .help("Teller hvor mange ganger vi bruker cachen")
+            .register()
     }
 }
 
