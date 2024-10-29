@@ -1,0 +1,55 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: speed-async
+  namespace: tbd
+  labels:
+    team: tbd
+spec:
+  image: {{image}}
+  strategy:
+    type: RollingUpdate
+  replicas:
+    min: 2
+    max: 24
+    scalingStrategy:
+      kafka:
+        topic: tbd.rapid.v1
+        consumerGroup: {{consumerGroupId}}
+        threshold: 200
+  liveness:
+    path: /isalive
+  readiness:
+    path: /isready
+  resources:
+    limits:
+      memory: 1024Mi
+  prometheus:
+    enabled: true
+    path: /metrics
+  preStopHook:
+    http:
+      path: /stop
+  secureLogs:
+    enabled: true
+  observability:
+    autoInstrumentation:
+      enabled: true
+      runtime: java
+  kafka:
+    pool: {{kafkaPool}}
+  accessPolicy:
+    outbound:
+      rules:
+        - application: speed-api
+  azure:
+    application:
+      enabled: true
+      tenant: nav.no
+  env:
+    - name: KAFKA_RAPID_TOPIC
+      value: tbd.rapid.v1
+    - name: KAFKA_CONSUMER_GROUP_ID
+      value: {{consumerGroupId}}
+    - name: KAFKA_RESET_POLICY
+      value: latest

@@ -1,0 +1,4 @@
+{
+  "kafkaPool": "nav-dev",
+  "consumerGroupId": "tbd-speed-v1"
+}
