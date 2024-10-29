@@ -36,6 +36,7 @@ spec:
     inbound:
       rules:
         - application: speed-async
+        - application: spennende
     outbound:
       external:
         - host: {{pdlHostname}}
