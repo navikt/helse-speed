@@ -1,25 +1,24 @@
 package no.nav.helse.speed.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import no.nav.helse.speed.api.IdenterResultat.FantIkkeIdenter
 import no.nav.helse.speed.api.IdenterResultat.Identer
+import no.nav.helse.speed.api.IdenterResultat.Kilde
 import no.nav.helse.speed.api.pdl.PdlClient
 import no.nav.helse.speed.api.pdl.PdlIdenterResultat
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.params.SetParams
 import java.security.MessageDigest
-import java.util.UUID
 
 class Identtjeneste(
     private val jedisPool: JedisPool,
     private val pdlClient: PdlClient,
     private val objectMapper: ObjectMapper
 ) {
-    fun hentFødselsnummerOgAktørId(ident: String): IdenterResultat {
+    fun hentFødselsnummerOgAktørId(ident: String, callId: String): IdenterResultat {
         return try {
-            hentFraMellomlager(ident) ?: hentFraPDL(ident, UUID.randomUUID()) ?: FantIkkeIdenter
+            hentFraMellomlager(ident) ?: hentFraPDL(ident, callId) ?: FantIkkeIdenter
         } catch (err: Exception) {
             IdenterResultat.Feilmelding(err.message ?: "Ukjent feil", err)
         }
@@ -32,17 +31,18 @@ class Identtjeneste(
             }?.let { objectMapper.readValue(it, Identer::class.java) }
         }
     }
-    
-    private fun hentFraPDL(ident: String, callId: UUID): IdenterResultat? {
-        return when (val identer = pdlClient.hentIdenter(ident, callId.toString())) {
+
+    private fun hentFraPDL(ident: String, callId: String): IdenterResultat? {
+        return when (val identer = pdlClient.hentIdenter(ident, callId)) {
             is PdlIdenterResultat.Identer -> Identer(
                 fødselsnummer = identer.fødselsnummer,
                 aktørId = identer.aktørId,
-                npid = identer.npid
+                npid = identer.npid,
+                kilde = Kilde.PDL
             ).also {
                 jedisPool.resource.use { jedis ->
-                    logg.info("lagrer OBO-token i mellomlager")
-                    jedis.set(mellomlagringsnøkkel(ident), objectMapper.writeValueAsString(it), SetParams.setParams().ex(IDENT_EXPIRATION_SECONDS))
+                    logg.info("lagrer pdl-svar i mellomlager")
+                    jedis.set(mellomlagringsnøkkel(ident), objectMapper.writeValueAsString(it.copy(kilde = Kilde.CACHE)), SetParams.setParams().ex(IDENT_EXPIRATION_SECONDS))
                 }
             }
             is PdlIdenterResultat.FantIkkeIdenter -> FantIkkeIdenter
@@ -70,9 +70,14 @@ sealed interface IdenterResultat {
     data class Identer(
         val fødselsnummer: String,
         val aktørId: String,
-        val npid: String? = null
+        val npid: String? = null,
+        val kilde: Kilde
     ): IdenterResultat
 
     data object FantIkkeIdenter: IdenterResultat
     data class Feilmelding(val melding: String, val årsak: Exception): IdenterResultat
+
+    enum class Kilde {
+        CACHE, PDL
+    }
 }
