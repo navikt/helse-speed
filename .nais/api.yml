@@ -43,7 +43,9 @@ spec:
     - instance: mellomlager
       access: readwrite
   ingresses:
-    - {{ingress}}
+    {{#each ingresses }}
+    - "{{this}}"
+    {{/each}}
   env:
     - name: PDL_URL
       value: https://{{pdlHostname}}/graphql
