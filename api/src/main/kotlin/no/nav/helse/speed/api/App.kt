@@ -38,8 +38,13 @@ import no.nav.helse.speed.api.pdl.PdlClient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
+import redis.clients.jedis.DefaultJedisClientConfig
+import redis.clients.jedis.HostAndPort
+import redis.clients.jedis.JedisPool
+import redis.clients.jedis.JedisPoolConfig
 import java.io.CharArrayWriter
 import java.net.URI
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -62,6 +67,8 @@ fun launchApp(env: Map<String, String>) {
         issuer = env.getValue("AZURE_OPENID_CONFIG_ISSUER"),
         clientId = env.getValue("AZURE_APP_CLIENT_ID"),
     )
+
+    val jedisPool = lagJedistilkobling(env)
 
     val azureClient = createAzureTokenClientFromEnvironment(env)
 
@@ -86,6 +93,28 @@ fun launchApp(env: Map<String, String>) {
         }
     )
     app.start(wait = true)
+}
+
+private fun lagJedistilkobling(env: Map<String, String>): JedisPool {
+    val uri = URI(env.getValue("REDIS_URI_MELLOMLAGER"))
+    val config = DefaultJedisClientConfig.builder()
+        .user(env.getValue("REDIS_USERNAME_MELLOMLAGER"))
+        .password(env.getValue("REDIS_PASSWORD_MELLOMLAGER"))
+        .ssl(true)
+        .hostnameVerifier { hostname, session ->
+            val evaluering = hostname == uri.host
+            logg.info("verifiserer vertsnavn $hostname: {}", evaluering)
+            evaluering
+        }
+        .build()
+    val poolConfig = JedisPoolConfig().apply {
+        minIdle = 1 // minimum antall ledige tilkoblinger
+        setMaxWait(Duration.ofSeconds(3)) // maksimal ventetid på tilkobling
+        testOnBorrow = true // tester tilkoblingen før lån
+        testWhileIdle = true // tester ledige tilkoblinger periodisk
+
+    }
+    return JedisPool(poolConfig, HostAndPort(uri.host, uri.port), config)
 }
 
 fun Application.lagApplikasjonsmodul(objectMapper: ObjectMapper, collectorRegistry: CollectorRegistry) {

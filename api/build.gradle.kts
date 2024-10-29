@@ -1,4 +1,5 @@
 val tbdLibsVersion = "2024.09.23-08.33-8839f9a1"
+val jedisVersion = "5.1.0"
 val logbackClassicVersion = "1.4.14"
 val logbackEncoderVersion = "7.4"
 val jacksonVersion = "2.16.1"
@@ -9,6 +10,8 @@ val mockKVersion = "1.13.9"
 dependencies {
     api("ch.qos.logback:logback-classic:$logbackClassicVersion")
     api("net.logstash.logback:logstash-logback-encoder:$logbackEncoderVersion")
+
+    api("redis.clients:jedis:$jedisVersion")
 
     api("io.ktor:ktor-server-cio:$ktorVersion")
     api("io.ktor:ktor-server-call-id:$ktorVersion")
@@ -28,9 +31,9 @@ dependencies {
     api("com.github.navikt.tbd-libs:azure-token-client-default:$tbdLibsVersion")
     api("com.github.navikt.tbd-libs:retry:$tbdLibsVersion")
 
-    implementation("io.ktor:ktor-server-core-jvm:2.3.7")
-    implementation("io.ktor:ktor-server-host-common-jvm:2.3.7")
-    implementation("io.ktor:ktor-server-status-pages-jvm:2.3.7")
+    implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-host-common-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-status-pages-jvm:$ktorVersion")
 
     testImplementation("com.github.navikt.tbd-libs:mock-http-client:$tbdLibsVersion")
     testImplementation("io.mockk:mockk:$mockKVersion")
