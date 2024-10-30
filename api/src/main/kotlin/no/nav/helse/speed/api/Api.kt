@@ -12,7 +12,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
-import no.nav.helse.speed.api.pdl.PdlPersonResultat
 import java.time.LocalDate
 
 fun Route.api(identtjeneste: Identtjeneste) {
@@ -79,6 +78,22 @@ fun Route.api(identtjeneste: Identtjeneste) {
             }
         }
     }
+    post("/api/historiske_identer") {
+        val request = call.receiveNullable<IdentRequest>() ?: return@post call.respond(HttpStatusCode.BadRequest, FeilResponse(
+            feilmelding = "Ugyldig request",
+            callId = call.callId
+        ))
+        val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
+
+        when (val svar = identtjeneste.hentHistoriskeFolkeregisterIdenter(request.ident, callId)) {
+            HistoriskeIdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
+            is HistoriskeIdenterResultat.Feilmelding -> throw Exception(svar.melding, svar.årsak)
+            is HistoriskeIdenterResultat.Identer -> call.respond(HttpStatusCode.OK, IdenterResponse(
+                fødselsnumre = svar.fødselsnumre
+            ))
+        }
+    }
+
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -88,6 +103,9 @@ data class SlettIdentRequest(val identer: List<String>)
 
 data class SlettResponse(val status: String)
 
+data class IdenterResponse(
+    val fødselsnumre: List<String>
+)
 data class IdentResponse(
     val fødselsnummer: String,
     val aktørId: String,

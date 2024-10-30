@@ -5,6 +5,7 @@ import io.prometheus.client.Counter
 import no.nav.helse.speed.api.IdenterResultat.FantIkkeIdenter
 import no.nav.helse.speed.api.IdenterResultat.Identer
 import no.nav.helse.speed.api.IdenterResultat.Kilde
+import no.nav.helse.speed.api.pdl.Ident
 import no.nav.helse.speed.api.pdl.PdlClient
 import no.nav.helse.speed.api.pdl.PdlIdenterResultat
 import no.nav.helse.speed.api.pdl.PdlPersonResultat
@@ -52,6 +53,19 @@ class Identtjeneste(
             hentFraMellomlager(ident) ?: hentFraPDL(ident, callId) ?: FantIkkeIdenter
         } catch (err: Exception) {
             IdenterResultat.Feilmelding(err.message ?: "Ukjent feil", err)
+        }
+    }
+
+    fun hentHistoriskeFolkeregisterIdenter(ident: String, callId: String): HistoriskeIdenterResultat {
+        return try {
+            when (val svar = pdlClient.hentAlleIdenter(ident, callId)) {
+                PdlIdenterResultat.FantIkkeIdenter -> HistoriskeIdenterResultat.FantIkkeIdenter
+                is PdlIdenterResultat.Identer -> HistoriskeIdenterResultat.Identer(
+                    fødselsnumre = svar.historiske.filterIsInstance<Ident.Fødselsnummer>().map { it.ident }
+                )
+            }
+        } catch (err: Exception) {
+            HistoriskeIdenterResultat.Feilmelding(err.message ?: "Ukjent feil", err)
         }
     }
 
@@ -144,6 +158,11 @@ sealed interface IdenterResultat {
     enum class Kilde {
         CACHE, PDL
     }
+}
+sealed interface HistoriskeIdenterResultat {
+    data class Identer(val fødselsnumre: List<String>): HistoriskeIdenterResultat
+    data object FantIkkeIdenter: HistoriskeIdenterResultat
+    data class Feilmelding(val melding: String, val årsak: Exception): HistoriskeIdenterResultat
 }
 
 sealed interface PersonResultat {
