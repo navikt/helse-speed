@@ -1,8 +1,13 @@
-query($ident: ID!) {
-    hentIdenter(ident: $ident, historikk: false, grupper: [FOLKEREGISTERIDENT, AKTORID]) {
+query ($ident: ID!, $historikk: Boolean!) {
+    hentIdenter(
+        ident: $ident
+        historikk: $historikk
+        grupper: [FOLKEREGISTERIDENT, AKTORID, NPID]
+    ) {
         identer {
-            ident,
-            historisk,
+            ident
+            historisk
             gruppe
         }
-    }}
+    }
+}

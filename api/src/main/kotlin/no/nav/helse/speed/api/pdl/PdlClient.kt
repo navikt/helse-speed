@@ -1,35 +1,27 @@
 package no.nav.helse.speed.api.pdl
 
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 
-private fun query(sti: String) = PdlClient::class.java.getResource(sti)!!.readText().replace(Regex("[\n\r]"), "")
-
 class PdlClient(
     private val baseUrl: String,
     private val accessTokenClient: AzureTokenProvider,
     private val accessTokenScope: String,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val httpClient: HttpClient = HttpClient.newHttpClient()
 ) {
 
-    companion object {
-        private val httpClient = HttpClient.newHttpClient()
-        private val hentIdenterQuery = query("/pdl/hentIdenter.graphql")
-        private val hentAlleIdenterQuery = query("/pdl/hentAlleIdenter.graphql")
-    }
+    internal fun hentIdenter(ident: String, callId: String) = hentAlleIdenter(ident, false, callId)
+    internal fun hentAlleIdenter(ident: String, callId: String) = hentAlleIdenter(ident, true, callId)
 
-    private fun request(
-        ident: String,
-        callId: String,
-        query: String
-    ): JsonNode {
-        val body = objectMapper.writeValueAsString(PdlQueryObject(query, Variables(ident)))
-
+    private fun request(query: PdlQueryObject, callId: String): HttpResponse<String> {
+        val body = objectMapper.writeValueAsString(query)
         val request = HttpRequest.newBuilder(URI.create(baseUrl))
             .header("TEMA", "SYK")
             .header("Authorization", "Bearer ${accessTokenClient.bearerToken(accessTokenScope).token}")
@@ -39,23 +31,77 @@ class PdlClient(
             .header("behandlingsnummer", "B139")
             .POST(HttpRequest.BodyPublishers.ofString(body))
             .build()
-
         val responseHandler = HttpResponse.BodyHandlers.ofString()
 
         val response = httpClient.send(request, responseHandler)
-        response.statusCode().let {
-            if (it >= 300) throw RuntimeException("error (responseCode=$it) from PDL")
-        }
-        return objectMapper.readTree(response.body())
+        if (response.statusCode() != 200) throw PdlException("error (responseCode=${response.statusCode()}) from PDL")
+
+        return response
     }
 
-    internal fun hentIdenter(
-        ident: String,
-        callId: String
-    ) = PdlOversetter.oversetterIdenter(request(ident, callId, hentIdenterQuery))
+    private fun hentAlleIdenter(ident: String, historisk: Boolean, callId: String): PdlIdenterResultat {
+        val response = convertResponseBody<PdlHentIdenterResponse>(request(hentIdenterQuery(ident, historisk), callId)).data.hentIdenter.identer
+        if (response.isEmpty()) return PdlIdenterResultat.FantIkkeIdenter
+        val (historiske, gjeldende) = response.partition { it.historisk }
+        return PdlIdenterResultat.Identer(
+            gjeldende = gjeldende.map(::mapIdent),
+            historiske = historiske.map(::mapIdent)
+        )
+    }
 
-    internal fun hentAlleIdenter(
-        ident: String,
-        callId: String
-    ) = PdlOversetter.oversetterAlleIdenter(request(ident, callId, hentAlleIdenterQuery))
+    private fun mapIdent(ident: PdlHentIdenterResponse.Ident) =
+        when (ident.gruppe) {
+            PdlHentIdenterResponse.Identgruppe.AKTORID -> Ident.AktørId(ident.ident)
+            PdlHentIdenterResponse.Identgruppe.FOLKEREGISTERIDENT -> Ident.Fødselsnummer(ident.ident)
+            PdlHentIdenterResponse.Identgruppe.NPID -> Ident.NPID(ident.ident)
+        }
+
+    private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): T {
+        return try {
+            objectMapper.readValue<T>(response.body())
+        } catch (err: Exception) {
+            throw PdlException(err.message ?: "JSON parsing error", err)
+        }
+    }
+}
+
+class PdlException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class PdlHentIdenterResponse(
+    val data: PdlHentIdenter
+) {
+    data class PdlHentIdenter(
+        val hentIdenter: Identer
+    )
+    data class Identer(
+        val identer: List<Ident>
+    )
+    data class Ident(
+        val ident: String,
+        val historisk: Boolean,
+        val gruppe: Identgruppe
+    )
+    enum class Identgruppe {
+        AKTORID, FOLKEREGISTERIDENT, NPID
+    }
+}
+
+sealed interface PdlIdenterResultat {
+    data class Identer(
+        val gjeldende: List<Ident>,
+        val historiske: List<Ident>
+    ): PdlIdenterResultat {
+        val fødselsnummer = gjeldende.first { it is Ident.Fødselsnummer }.ident
+        val aktørId = gjeldende.first { it is Ident.AktørId }.ident
+        val npid = gjeldende.firstOrNull { it is Ident.NPID }?.ident
+    }
+
+    data object FantIkkeIdenter: PdlIdenterResultat
+}
+
+sealed class Ident(val ident: String) {
+    class Fødselsnummer(ident: String) : Ident(ident)
+    class AktørId(ident: String) : Ident(ident)
+    class NPID(ident: String) : Ident(ident)
 }
