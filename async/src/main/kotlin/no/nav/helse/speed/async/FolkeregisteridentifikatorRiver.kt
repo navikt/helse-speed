@@ -8,13 +8,14 @@ import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 
 class FolkeregisteridentifikatorRiver(
     private val consumer: KafkaConsumer<ByteArray, GenericRecord>,
     private val speedClient: SpeedClient
 ) {
-    private val running = AtomicBoolean(true)
+    private val latch = CountDownLatch(1)
 
     init {
         Runtime.getRuntime().addShutdownHook(Thread {
@@ -22,26 +23,36 @@ class FolkeregisteridentifikatorRiver(
         })
     }
 
+    fun isRunning() = latch.count == 1L
+    fun await() = latch.await()
+
     fun stop() {
         try {
             consumer.wakeup()
         } catch (err: Exception) { }
-        running.set(false)
+        latch.countDown()
     }
 
     fun runBlocking() {
-        while (running.get()) {
-            val records = consumer.poll(Duration.ofMillis(100))
-            records.forEach { it ->
-                val record = it.value()
-                val opplysningstype = record.get("opplysningstype").toString()
-                if (opplysningstype == "FOLKEREGISTERIDENTIFIKATOR_V1") {
-                    val callId = UUID.randomUUID().toString()
-                    withMDC("callId" to callId) {
-                        håndterFolkeregisteridentifikatorOpplysning(record, callId)
+        try {
+            while (isRunning()) {
+                val records = consumer.poll(Duration.ofMillis(100))
+                records.forEach { it ->
+                    val record = it.value()
+                    val opplysningstype = record.get("opplysningstype").toString()
+                    if (opplysningstype == "FOLKEREGISTERIDENTIFIKATOR_V1") {
+                        val callId = UUID.randomUUID().toString()
+                        withMDC("callId" to callId) {
+                            håndterFolkeregisteridentifikatorOpplysning(record, callId)
+                        }
                     }
                 }
             }
+        } catch (err: Exception) {
+            sikkerlogg.error("Fikk error ved lesing av leesah: ${err.message}", err)
+            logg.error("Fikk error ved lesing av leesah: se sikker logg")
+        } finally {
+            latch.countDown()
         }
     }
 
@@ -63,5 +74,6 @@ class FolkeregisteridentifikatorRiver(
 
     private companion object {
         private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
+        private val logg = LoggerFactory.getLogger(this::class.java)
     }
 }

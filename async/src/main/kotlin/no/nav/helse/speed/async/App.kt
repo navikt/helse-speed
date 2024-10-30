@@ -52,5 +52,14 @@ fun main() {
                     fregRiver.stop()
                 }
             })
+
+            Thread {
+                while (fregRiver.isRunning()) {
+                    fregRiver.await()
+                }
+                logg.info("stopper rapid fordi FolkeregisteridentifikatorRiver har stoppet")
+                sikkerlogg.info("stopper rapid fordi FolkeregisteridentifikatorRiver har stoppet")
+                stop()
+            }.start()
         }.start()
 }
