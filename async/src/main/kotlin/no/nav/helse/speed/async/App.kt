@@ -31,7 +31,7 @@ fun main() {
 
     val leesahConsumer =  KafkaConsumer(kafkaConfig.consumerConfig(env.getValue("KAFKA_CONSUMER_GROUP_ID"), Properties().apply {
         put("specific.avro.reader", "true")
-        put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "LATEST")
+        put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
         put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true")
     }), ByteArrayDeserializer(), LeesahDeserializer())
     val fregRiver = FolkeregisteridentifikatorRiver(leesahConsumer, speedClient)
