@@ -45,7 +45,7 @@ class LeesahDeserializer : Deserializer<GenericRecord> {
         private fun Logger.feilVedDeserialisering(data: ByteArray, throwable: Throwable, versjon: String) =
             warn("Klarte ikke å deserialisere Personhendelse-melding fra Leesah med $versjon. Base64='${Base64.getEncoder().encodeToString(data)}'", throwable)
         private fun String.lastSkjema() =
-            Schema.Parser().parse(this::class.java.getResourceAsStream("/pdl/Personhendelse_$this.avsc"))
+            Schema.Parser().parse(LeesahDeserializer::class.java.getResourceAsStream("/pdl/Personhendelse_$this.avsc"))
         private val v2Skjema = "V2".lastSkjema()
         private val v3Skjema = "V3".lastSkjema()
     }
