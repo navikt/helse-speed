@@ -3,6 +3,7 @@ package no.nav.helse.speed.api.pdl
 private fun lastSkjema(sti: String) = PdlQueryObject::class.java.getResource(sti)!!.readText().replace(Regex("[\n\r]"), "")
 
 private val hentIdenterQuery = lastSkjema("/pdl/hentIdenter.graphql")
+private val hentPersonQuery = lastSkjema("/pdl/hentPerson.graphql")
 
 data class PdlQueryObject(
     val query: String,
@@ -15,5 +16,13 @@ fun hentIdenterQuery(ident: String, historikk: Boolean) =
         variables = mapOf(
             "ident" to ident,
             "historikk" to historikk
+        )
+    )
+
+fun hentPersonQuery(ident: String) =
+    PdlQueryObject(
+        query = hentPersonQuery,
+        variables = mapOf(
+            "ident" to ident
         )
     )

@@ -7,17 +7,46 @@ import no.nav.helse.speed.api.IdenterResultat.Identer
 import no.nav.helse.speed.api.IdenterResultat.Kilde
 import no.nav.helse.speed.api.pdl.PdlClient
 import no.nav.helse.speed.api.pdl.PdlIdenterResultat
+import no.nav.helse.speed.api.pdl.PdlPersonResultat
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.params.SetParams
 import java.security.MessageDigest
 import java.time.Duration
+import java.time.LocalDate
 
 class Identtjeneste(
     private val jedisPool: JedisPool,
     private val pdlClient: PdlClient,
     private val objectMapper: ObjectMapper
 ) {
+    fun hentPerson(ident: String, callId: String): PersonResultat {
+        return try {
+            when (val resultat = pdlClient.hentPerson(ident, callId))  {
+                PdlPersonResultat.FantIkkePerson -> PersonResultat.FantIkkePerson
+                is PdlPersonResultat.Person -> PersonResultat.Person(
+                    fødselsdato = resultat.fødselsdato,
+                    dødsdato = resultat.dødsdato,
+                    fornavn = resultat.fornavn,
+                    mellomnavn = resultat.mellomnavn,
+                    etternavn = resultat.etternavn,
+                    adressebeskyttelse = when (resultat.adressebeskyttelse) {
+                        PdlPersonResultat.Person.Adressebeskyttelse.FORTROLIG -> PersonResultat.Person.Adressebeskyttelse.FORTROLIG
+                        PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG -> PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG
+                        PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND -> PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
+                        PdlPersonResultat.Person.Adressebeskyttelse.UGRADERT -> PersonResultat.Person.Adressebeskyttelse.UGRADERT
+                    },
+                    kjønn = when (resultat.kjønn) {
+                        PdlPersonResultat.Person.Kjønn.MANN -> PersonResultat.Person.Kjønn.MANN
+                        PdlPersonResultat.Person.Kjønn.KVINNE -> PersonResultat.Person.Kjønn.KVINNE
+                        PdlPersonResultat.Person.Kjønn.UKJENT -> PersonResultat.Person.Kjønn.UKJENT
+                    }
+                )
+            }
+        } catch (err: Exception) {
+            PersonResultat.Feilmelding(err.message ?: "Ukjent feil", err)
+        }
+    }
     fun hentFødselsnummerOgAktørId(ident: String, callId: String): IdenterResultat {
         return try {
             hentFraMellomlager(ident) ?: hentFraPDL(ident, callId) ?: FantIkkeIdenter
@@ -115,6 +144,28 @@ sealed interface IdenterResultat {
     enum class Kilde {
         CACHE, PDL
     }
+}
+
+sealed interface PersonResultat {
+    data class Person(
+        val fødselsdato: LocalDate,
+        val dødsdato: LocalDate?,
+        val fornavn: String,
+        val mellomnavn: String?,
+        val etternavn: String,
+        val adressebeskyttelse: Adressebeskyttelse,
+        val kjønn: Kjønn
+    ): PersonResultat {
+        enum class Adressebeskyttelse {
+            FORTROLIG, STRENGT_FORTROLIG, STRENGT_FORTROLIG_UTLAND, UGRADERT
+        }
+        enum class Kjønn {
+            MANN, KVINNE, UKJENT
+        }
+    }
+
+    data object FantIkkePerson: PersonResultat
+    data class Feilmelding(val melding: String, val årsak: Exception): PersonResultat
 }
 
 sealed interface SlettResultat {
