@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.params.SetParams
 import java.security.MessageDigest
+import java.time.Duration
 
 class Identtjeneste(
     private val jedisPool: JedisPool,
@@ -22,6 +23,19 @@ class Identtjeneste(
             hentFraMellomlager(ident) ?: hentFraPDL(ident, callId) ?: FantIkkeIdenter
         } catch (err: Exception) {
             IdenterResultat.Feilmelding(err.message ?: "Ukjent feil", err)
+        }
+    }
+
+    fun tømFraMellomlager(identer: List<String>): SlettResultat {
+        return try {
+            jedisPool.resource.use { jedis ->
+                identer
+                    .map { mellomlagringsnøkkel(it) }
+                    .forEach { jedis.del(it) }
+            }
+            SlettResultat.Ok
+        } catch (err: Exception) {
+            SlettResultat.Feilmelding(err.message ?: "Ukjent feil", err)
         }
     }
 
@@ -73,7 +87,7 @@ class Identtjeneste(
 
     private companion object {
         private const val CACHE_PREFIX = "ident_"
-        private const val IDENT_EXPIRATION_SECONDS: Long = 3600
+        private val IDENT_EXPIRATION_SECONDS: Long = Duration.ofDays(7).toSeconds()
 
         private val logg = LoggerFactory.getLogger(this::class.java)
         private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
@@ -101,4 +115,9 @@ sealed interface IdenterResultat {
     enum class Kilde {
         CACHE, PDL
     }
+}
+
+sealed interface SlettResultat {
+    data object Ok: SlettResultat
+    data class Feilmelding(val melding: String, val årsak: Exception): SlettResultat
 }
