@@ -35,6 +35,7 @@ class FolkeregisteridentifikatorRiver(
 
     fun runBlocking() {
         try {
+            consumer.subscribe(listOf("pdl.leesah-v1"))
             while (isRunning()) {
                 val records = consumer.poll(Duration.ofMillis(100))
                 records.forEach { it ->
