@@ -2,6 +2,7 @@ package no.nav.helse.speed.api
 
 import com.auth0.jwk.JwkProviderBuilder
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
@@ -50,7 +51,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 private val logg = LoggerFactory.getLogger(::main.javaClass)
 private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
-private val objectmapper = jacksonObjectMapper().registerModules(JavaTimeModule())
+private val objectmapper = jacksonObjectMapper()
+    .registerModules(JavaTimeModule())
+    .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
 
 fun main() {
     Thread.currentThread().setUncaughtExceptionHandler { _, e ->
