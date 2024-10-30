@@ -40,7 +40,7 @@ fun main() {
     RapidApplication.create(env, consumerProducerFactory = consumerProducerFactory)
         .apply {
             register(object : RapidsConnection.StatusListener {
-                override fun onReady(rapidsConnection: RapidsConnection) {
+                override fun onStartup(rapidsConnection: RapidsConnection) {
                     logg.info("starter FolkeregisteridentifikatorRiver")
                     sikkerlogg.info("starter FolkeregisteridentifikatorRiver")
                     fregThread.start()
