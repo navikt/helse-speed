@@ -1,4 +1,5 @@
 {
   "kafkaPool": "nav-dev",
+  "tenant": "trygdeetaten.no",
   "consumerGroupId": "tbd-speed-v1"
 }

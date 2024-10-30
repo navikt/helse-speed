@@ -45,7 +45,7 @@ spec:
   azure:
     application:
       enabled: true
-      tenant: nav.no
+      tenant: {{tenant}}
   env:
     - name: KAFKA_RAPID_TOPIC
       value: tbd.rapid.v1

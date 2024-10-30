@@ -31,7 +31,7 @@ spec:
   azure:
     application:
       enabled: true
-      tenant: nav.no
+      tenant: {{tenant}}
   accessPolicy:
     inbound:
       rules:
