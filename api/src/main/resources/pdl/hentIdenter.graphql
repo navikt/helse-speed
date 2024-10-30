@@ -1,13 +1,5 @@
 query ($ident: ID!, $historikk: Boolean!) {
-    hentIdenter(
-        ident: $ident
-        historikk: $historikk
-        grupper: [FOLKEREGISTERIDENT, AKTORID, NPID]
-    ) {
-        identer {
-            ident
-            historisk
-            gruppe
-        }
+    hentIdenter( ident: $ident, historikk: $historikk, grupper: [FOLKEREGISTERIDENT, AKTORID, NPID]) {
+        identer { ident, historisk, gruppe }
     }
 }
