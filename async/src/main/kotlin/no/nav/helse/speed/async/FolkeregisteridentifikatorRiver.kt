@@ -5,6 +5,7 @@ import com.github.navikt.tbd_libs.speed.SpeedClient
 import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.common.errors.WakeupException
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.UUID
@@ -49,6 +50,9 @@ class FolkeregisteridentifikatorRiver(
                     }
                 }
             }
+        } catch (ex: WakeupException) {
+            sikkerlogg.info("Consumeren fikk beskjed om å våkne opp, mest sannsynlig fordi appen skal skrus av", ex)
+            logg.info("Consumeren fikk beskjed om å våkne opp, mest sannsynlig fordi appen skal skrus av", ex)
         } catch (err: Exception) {
             sikkerlogg.error("Fikk error ved lesing av leesah: ${err.message}", err)
             logg.error("Fikk error ved lesing av leesah: se sikker logg")
