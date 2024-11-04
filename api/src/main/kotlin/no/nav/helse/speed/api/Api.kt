@@ -116,7 +116,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
                                 VergemålEllerFremtidsfullmakt.Vergemåltype.MIDLERTIDIG_FOR_VOKSEN -> Vergemåltype.MIDLERTIDIG_FOR_VOKSEN
                                 VergemålEllerFremtidsfullmakt.Vergemåltype.MINDREÅRIG -> Vergemåltype.MINDREÅRIG
                                 VergemålEllerFremtidsfullmakt.Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG -> Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.FORVALTNING_UTEN_FORVERGEMÅL -> Vergemåltype.FORVALTNING_UTEN_FORVERGEMÅL
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.FORVALTNING_UTENFOR_VERGEMÅL -> Vergemåltype.FORVALTNING_UTENFOR_VERGEMÅL
                                 VergemålEllerFremtidsfullmakt.Vergemåltype.STADFESTET_FREMTIDSFULLMAKT -> Vergemåltype.STADFESTET_FREMTIDSFULLMAKT
                             }
                         )
@@ -185,7 +185,7 @@ data class VergemålEllerFremtidsfullmaktResponse(
         MIDLERTIDIG_FOR_VOKSEN,
         MINDREÅRIG,
         MIDLERTIDIG_FOR_MINDREÅRIG,
-        FORVALTNING_UTEN_FORVERGEMÅL,
+        FORVALTNING_UTENFOR_VERGEMÅL,
         STADFESTET_FREMTIDSFULLMAKT
     }
 }

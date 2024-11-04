@@ -147,7 +147,7 @@ class Identtjeneste(
                                 VergemålEllerFremtidsfullmakt.Vergemåltype.MidlertidigForVoksen -> Vergemåltype.MIDLERTIDIG_FOR_VOKSEN
                                 VergemålEllerFremtidsfullmakt.Vergemåltype.Mindreårig -> Vergemåltype.MINDREÅRIG
                                 VergemålEllerFremtidsfullmakt.Vergemåltype.MidlertidigForMindreårig -> Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.ForvaltningUtenforVergemål -> Vergemåltype.FORVALTNING_UTEN_FORVERGEMÅL
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.ForvaltningUtenforVergemål -> Vergemåltype.FORVALTNING_UTENFOR_VERGEMÅL
                                 VergemålEllerFremtidsfullmakt.Vergemåltype.StadfestetFremtidsfullmakt -> Vergemåltype.STADFESTET_FREMTIDSFULLMAKT
                             }
                         )
@@ -296,7 +296,7 @@ sealed interface VergemålEllerFremtidsfullmaktResultat {
             MIDLERTIDIG_FOR_VOKSEN,
             MINDREÅRIG,
             MIDLERTIDIG_FOR_MINDREÅRIG,
-            FORVALTNING_UTEN_FORVERGEMÅL,
+            FORVALTNING_UTENFOR_VERGEMÅL,
             STADFESTET_FREMTIDSFULLMAKT
         }
     }
