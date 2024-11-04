@@ -10,10 +10,13 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.helse.speed.api.IdenterResultat.FantIkkeIdenter
 import no.nav.helse.speed.api.IdenterResultat.Identer
+import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemåltype
 import no.nav.helse.speed.api.pdl.Ident
 import no.nav.helse.speed.api.pdl.PdlClient
 import no.nav.helse.speed.api.pdl.PdlIdenterResultat
 import no.nav.helse.speed.api.pdl.PdlPersonResultat
+import no.nav.helse.speed.api.pdl.PdlVergemålEllerFremtidsfullmaktResultat
+import no.nav.helse.speed.api.pdl.PdlVergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.params.SetParams
@@ -36,6 +39,9 @@ class Identtjeneste(
 
     fun hentHistoriskeFolkeregisterIdenter(ident: String, callId: String): Result<HistoriskeIdenterResultat> {
         return hentHistoriskeIdenterFraMellomlager(ident) ?: hentHistoriskeIdenterFraPDL(ident, callId)
+    }
+    fun  hentVergemålEllerFremtidsfullmakt(ident: String, callId: String): Result<VergemålEllerFremtidsfullmaktResultat> {
+        return hentVergemålEllerFremtidsfullmaktFraMellomlager(ident) ?: hentVergemålEllerFremtidsfullmaktFraPDL(ident, callId)
     }
 
     fun tømFraMellomlager(identer: List<String>): SlettResultat {
@@ -65,6 +71,9 @@ class Identtjeneste(
     }
     private fun hentHistoriskeIdenterFraMellomlager(ident: String): Result.Ok<HistoriskeIdenterResultat.Identer>? {
         return hentFraMellomlager<HistoriskeIdenterResultat.Identer>(mellomlagringsnøkkel(CACHE_PREFIX_HISTORISKE_IDENTEROPPSLAG, ident))
+    }
+    private fun hentVergemålEllerFremtidsfullmaktFraMellomlager(ident: String): Result.Ok<VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt>? {
+        return hentFraMellomlager<VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt>(mellomlagringsnøkkel(CACHE_PREFIX_VERGEMÅLOPPSLAG, ident))
     }
 
     private inline fun <reified T> hentFraMellomlager(cacheKey: String): Result.Ok<T>? {
@@ -124,6 +133,33 @@ class Identtjeneste(
         }
     }
 
+    private fun hentVergemålEllerFremtidsfullmaktFraPDL(ident: String, callId: String): Result<VergemålEllerFremtidsfullmaktResultat> {
+        return pdlClient.hentVergemålEllerFremtidsfullmakt(ident, callId).map { person ->
+            when (person) {
+                PdlVergemålEllerFremtidsfullmaktResultat.FantIkkePerson -> VergemålEllerFremtidsfullmaktResultat.FantIkkePerson.ok()
+                is VergemålEllerFremtidsfullmakt -> VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt(
+                    vergemålEllerFremtidsfullmakter = person.vergemålEllerFremtidsfullmakter.map {
+                        VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemål(
+                            type = when (it.type) {
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.EnsligMindreårigAsylsøker -> Vergemåltype.ENSLIG_MINDREÅRIG_ASYLSØKER
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.EnsligMindreårigFlyktning -> Vergemåltype.ENSLIG_MINDREÅRIG_FLYKTNING
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.Voksen -> Vergemåltype.VOKSEN
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.MidlertidigForVoksen -> Vergemåltype.MIDLERTIDIG_FOR_VOKSEN
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.Mindreårig -> Vergemåltype.MINDREÅRIG
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.MidlertidigForMindreårig -> Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.ForvaltningUtenforVergemål -> Vergemåltype.FORVALTNING_UTEN_FORVERGEMÅL
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.StadfestetFremtidsfullmakt -> Vergemåltype.STADFESTET_FREMTIDSFULLMAKT
+                            }
+                        )
+                    },
+                    kilde = Kilde.PDL
+                )
+                    .also { lagreVergemålTilMellomlager(ident, it) }
+                    .ok()
+            }
+        }
+    }
+
     private fun hentFraPDL(ident: String, callId: String): Result<IdenterResultat> {
         return pdlClient.hentIdenter(ident, callId).map { identer ->
             when (identer) {
@@ -140,6 +176,9 @@ class Identtjeneste(
 
     private fun lagrePersonTilMellomlager(ident: String, resultat: PersonResultat.Person) {
         lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_PERSONINFOOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
+    }
+    private fun lagreVergemålTilMellomlager(ident: String, resultat: VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt) {
+        lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_VERGEMÅLOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
     }
 
     private fun lagreHistoriskeIdenterTilMellomlager(ident: String, resultat: HistoriskeIdenterResultat.Identer) {
@@ -191,6 +230,7 @@ class Identtjeneste(
         private const val CACHE_PREFIX_IDENTOPPSLAG = "ident_"
         private const val CACHE_PREFIX_PERSONINFOOPPSLAG = "personinfo_"
         private const val CACHE_PREFIX_HISTORISKE_IDENTEROPPSLAG = "historiske_identer_"
+        private const val CACHE_PREFIX_VERGEMÅLOPPSLAG = "vergemaal_"
         private val IDENT_EXPIRATION_SECONDS: Long = Duration.ofDays(7).toSeconds()
 
         private val logg = LoggerFactory.getLogger(this::class.java)
@@ -239,6 +279,28 @@ sealed interface PersonResultat {
     }
 
     data object FantIkkePerson: PersonResultat
+}
+
+sealed interface VergemålEllerFremtidsfullmaktResultat {
+    data class VergemålEllerFremtidsfullmakt(
+        val vergemålEllerFremtidsfullmakter: List<Vergemål>,
+        val kilde: Kilde
+    ) : VergemålEllerFremtidsfullmaktResultat {
+        data class Vergemål(
+            val type: Vergemåltype
+        )
+        enum class Vergemåltype {
+            ENSLIG_MINDREÅRIG_ASYLSØKER,
+            ENSLIG_MINDREÅRIG_FLYKTNING,
+            VOKSEN,
+            MIDLERTIDIG_FOR_VOKSEN,
+            MINDREÅRIG,
+            MIDLERTIDIG_FOR_MINDREÅRIG,
+            FORVALTNING_UTEN_FORVERGEMÅL,
+            STADFESTET_FREMTIDSFULLMAKT
+        }
+    }
+    data object FantIkkePerson : VergemålEllerFremtidsfullmaktResultat
 }
 
 sealed interface SlettResultat {

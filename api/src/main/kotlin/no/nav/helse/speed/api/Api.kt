@@ -12,6 +12,9 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
+import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResponse.*
+import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResponse.Vergemåltype
+import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt
 import java.time.LocalDate
 
 fun Route.api(identtjeneste: Identtjeneste) {
@@ -95,6 +98,37 @@ fun Route.api(identtjeneste: Identtjeneste) {
             }
         }
     }
+    post("/api/vergemål_eller_fremtidsfullmakt") {
+        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
+        val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
+
+        when (val svar = identtjeneste.hentVergemålEllerFremtidsfullmakt(request.ident, callId)) {
+            is Result.Error -> throw Exception(svar.error, svar.cause)
+            is Result.Ok -> when (val vergemål = svar.value) {
+                VergemålEllerFremtidsfullmaktResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
+                is VergemålEllerFremtidsfullmakt -> call.respond(HttpStatusCode.OK, VergemålEllerFremtidsfullmaktResponse(
+                    vergemålEllerFremtidsfullmakter = vergemål.vergemålEllerFremtidsfullmakter.map {
+                        Vergemål(
+                            type = when (it.type) {
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.ENSLIG_MINDREÅRIG_ASYLSØKER -> Vergemåltype.ENSLIG_MINDREÅRIG_ASYLSØKER
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.ENSLIG_MINDREÅRIG_FLYKTNING -> Vergemåltype.ENSLIG_MINDREÅRIG_FLYKTNING
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.VOKSEN -> Vergemåltype.VOKSEN
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.MIDLERTIDIG_FOR_VOKSEN -> Vergemåltype.MIDLERTIDIG_FOR_VOKSEN
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.MINDREÅRIG -> Vergemåltype.MINDREÅRIG
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG -> Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.FORVALTNING_UTEN_FORVERGEMÅL -> Vergemåltype.FORVALTNING_UTEN_FORVERGEMÅL
+                                VergemålEllerFremtidsfullmakt.Vergemåltype.STADFESTET_FREMTIDSFULLMAKT -> Vergemåltype.STADFESTET_FREMTIDSFULLMAKT
+                            }
+                        )
+                    },
+                    kilde = when (vergemål.kilde) {
+                        Kilde.CACHE -> KildeResponse.CACHE
+                        Kilde.PDL -> KildeResponse.PDL
+                    }
+                ))
+            }
+        }
+    }
 
 }
 
@@ -134,5 +168,24 @@ data class PersonResponse(
     }
     enum class Kjønn {
         MANN, KVINNE, UKJENT
+    }
+}
+
+data class VergemålEllerFremtidsfullmaktResponse(
+    val vergemålEllerFremtidsfullmakter: List<Vergemål>,
+    val kilde: KildeResponse
+) {
+    data class Vergemål(
+        val type: Vergemåltype
+    )
+    enum class Vergemåltype {
+        ENSLIG_MINDREÅRIG_ASYLSØKER,
+        ENSLIG_MINDREÅRIG_FLYKTNING,
+        VOKSEN,
+        MIDLERTIDIG_FOR_VOKSEN,
+        MINDREÅRIG,
+        MIDLERTIDIG_FOR_MINDREÅRIG,
+        FORVALTNING_UTEN_FORVERGEMÅL,
+        STADFESTET_FREMTIDSFULLMAKT
     }
 }

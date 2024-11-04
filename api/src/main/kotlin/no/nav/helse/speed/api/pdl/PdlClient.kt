@@ -9,6 +9,8 @@ import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.map
 import com.github.navikt.tbd_libs.result_object.ok
+import no.nav.helse.speed.api.pdl.PdlHentPersonResponse.Person
+import no.nav.helse.speed.api.pdl.PdlVergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemåltype
 import java.time.LocalDate
 import java.net.URI
 import java.net.http.HttpClient
@@ -50,6 +52,34 @@ class PdlClient(
                     PdlHentPersonResponse.Kjønn.Kjønnverdi.UKJENT -> PdlPersonResultat.Person.Kjønn.UKJENT
                 }
             ).ok()
+        }
+    }
+    internal fun hentVergemålEllerFremtidsfullmakt(ident: String, callId: String): Result<PdlVergemålEllerFremtidsfullmaktResultat> {
+        return request(hentVergemålQuery(ident), callId).map {
+            convertResponseBody<PdlHentVergemålResponse>(it)
+        }.map {
+            val person = it.data.hentPerson
+            if (person == null) PdlVergemålEllerFremtidsfullmaktResultat.FantIkkePerson.ok()
+            else {
+                val vergemåltyper = person.vergemaalEllerFremtidsfullmakt.map {
+                    PdlVergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemål(
+                        type = when (it.type) {
+                            PdlHentVergemålResponse.Vergemåltype.ensligMindreaarigAsylsoeker -> Vergemåltype.EnsligMindreårigAsylsøker
+                            PdlHentVergemålResponse.Vergemåltype.ensligMindreaarigFlyktning -> Vergemåltype.EnsligMindreårigFlyktning
+                            PdlHentVergemålResponse.Vergemåltype.voksen -> Vergemåltype.Voksen
+                            PdlHentVergemålResponse.Vergemåltype.midlertidigForVoksen -> Vergemåltype.MidlertidigForVoksen
+                            PdlHentVergemålResponse.Vergemåltype.mindreaarig -> Vergemåltype.Mindreårig
+                            PdlHentVergemålResponse.Vergemåltype.midlertidigForMindreaarig -> Vergemåltype.MidlertidigForMindreårig
+                            PdlHentVergemålResponse.Vergemåltype.forvaltningUtenforVergemaal -> Vergemåltype.ForvaltningUtenforVergemål
+                            PdlHentVergemålResponse.Vergemåltype.stadfestetFremtidsfullmakt -> Vergemåltype.StadfestetFremtidsfullmakt
+                        }
+
+                    )
+                }
+                PdlVergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt(
+                    vergemålEllerFremtidsfullmakter = vergemåltyper
+                ).ok()
+            }
         }
     }
 
@@ -132,6 +162,30 @@ data class PdlHentIdenterResponse(
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+data class PdlHentVergemålResponse(
+    val data: PdlHentPerson
+) {
+    data class PdlHentPerson(
+        val hentPerson: Person?
+    )
+    data class Person(
+        val vergemaalEllerFremtidsfullmakt: List<Vergemål>
+    )
+    data class Vergemål(
+        val type: Vergemåltype
+    )
+    enum class Vergemåltype {
+        ensligMindreaarigAsylsoeker,
+        ensligMindreaarigFlyktning,
+        voksen,
+        midlertidigForVoksen,
+        mindreaarig,
+        midlertidigForMindreaarig,
+        forvaltningUtenforVergemaal,
+        stadfestetFremtidsfullmakt
+    }
+}
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class PdlHentPersonResponse(
     val data: PdlHentPerson
 ) {
@@ -173,7 +227,26 @@ data class PdlHentPersonResponse(
     )
     data class Metadata(val master: String)
 }
-
+sealed interface PdlVergemålEllerFremtidsfullmaktResultat {
+    data class VergemålEllerFremtidsfullmakt(
+        val vergemålEllerFremtidsfullmakter: List<Vergemål>
+    ) : PdlVergemålEllerFremtidsfullmaktResultat {
+        data class Vergemål(
+            val type: Vergemåltype
+        )
+        enum class Vergemåltype {
+            EnsligMindreårigAsylsøker,
+            EnsligMindreårigFlyktning,
+            Voksen,
+            MidlertidigForVoksen,
+            Mindreårig,
+            MidlertidigForMindreårig,
+            ForvaltningUtenforVergemål,
+            StadfestetFremtidsfullmakt
+        }
+    }
+    data object FantIkkePerson : PdlVergemålEllerFremtidsfullmaktResultat
+}
 sealed interface PdlPersonResultat {
     data class Person(
         val fødselsdato: LocalDate,
