@@ -1,8 +1,8 @@
 package no.nav.helse.speed.api
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.github.navikt.tbd_libs.naisful.FeilResponse
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.call
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.callid.callId

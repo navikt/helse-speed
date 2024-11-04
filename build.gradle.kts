@@ -1,5 +1,6 @@
 val gradleversjon = "8.10.2"
 val junitJupiterVersion = "5.10.2"
+val tbdLibsVersion = "2024.11.04-08.40-818f2ee6"
 
 plugins {
     kotlin("jvm") version "1.9.22" apply false
@@ -26,6 +27,8 @@ allprojects {
 
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
+
+    ext.set("tbdLibsVersion", tbdLibsVersion)
 
     val testImplementation by configurations
     val testRuntimeOnly by configurations

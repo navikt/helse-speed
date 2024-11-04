@@ -1,7 +1,8 @@
 package no.nav.helse.speed.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.prometheus.client.Counter
+import io.micrometer.core.instrument.Counter
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.helse.speed.api.IdenterResultat.FantIkkeIdenter
 import no.nav.helse.speed.api.IdenterResultat.Identer
 import no.nav.helse.speed.api.IdenterResultat.Kilde
@@ -19,7 +20,8 @@ import java.time.LocalDate
 class Identtjeneste(
     private val jedisPool: JedisPool,
     private val pdlClient: PdlClient,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val meterRegistry: PrometheusMeterRegistry
 ) {
     fun hentPerson(ident: String, callId: String): PersonResultat {
         return try {
@@ -88,7 +90,7 @@ class Identtjeneste(
                 jedis.get(mellomlagringsnøkkel(ident))
                     ?.also { logg.info("hentet identer fra mellomlager") }
                     ?.let { objectMapper.readValue(it, Identer::class.java) }
-                    ?.also { cachebruk.labels("lese").inc() }
+                    ?.also { økTeller("lese") }
             }
         } catch (err: Exception) {
             sikkerlogg.error("Kunne ikke koble til jedis, fall-backer til ingen cache: ${err.message}", err)
@@ -114,10 +116,18 @@ class Identtjeneste(
                 logg.info("lagrer pdl-svar i mellomlager")
                 jedis.set(mellomlagringsnøkkel(ident), objectMapper.writeValueAsString(resultat.copy(kilde = Kilde.CACHE)), SetParams.setParams().ex(IDENT_EXPIRATION_SECONDS))
             }
-            cachebruk.labels("skrive").inc()
+            økTeller("skrive")
         } catch (err: Exception) {
             sikkerlogg.error("Kunne ikke koble til jedis, fall-backer til ingen cache: ${err.message}", err)
         }
+    }
+
+    private fun økTeller(operasjon: String) {
+        Counter.builder("cachebruk")
+            .description("Teller hvor mange ganger vi bruker cachen")
+            .tag("operasjon", operasjon)
+            .register(meterRegistry)
+            .increment()
     }
 
     @OptIn(ExperimentalStdlibApi::class)
@@ -134,13 +144,6 @@ class Identtjeneste(
 
         private val logg = LoggerFactory.getLogger(this::class.java)
         private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
-
-        private val cachebruk = Counter
-            .build()
-            .name("cachebruk")
-            .labelNames("operasjon")
-            .help("Teller hvor mange ganger vi bruker cachen")
-            .register()
     }
 }
 

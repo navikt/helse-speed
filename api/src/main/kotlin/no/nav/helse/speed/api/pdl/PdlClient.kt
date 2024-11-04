@@ -46,10 +46,14 @@ class PdlClient(
     }
 
     private fun request(query: PdlQueryObject, callId: String): HttpResponse<String> {
+        val bearerToken = when (val result = accessTokenClient.bearerToken(accessTokenScope)) {
+            is AzureTokenProvider.AzureTokenResult.Error -> throw PdlException("Fikk ikke token fra azure: ${result.error}", result.exception)
+            is AzureTokenProvider.AzureTokenResult.Ok -> result.azureToken.token
+        }
         val body = objectMapper.writeValueAsString(query)
         val request = HttpRequest.newBuilder(URI.create(baseUrl))
             .header("TEMA", "SYK")
-            .header("Authorization", "Bearer ${accessTokenClient.bearerToken(accessTokenScope).token}")
+            .header("Authorization", "Bearer ${bearerToken}")
             .header("Content-Type", "application/json")
             .header("Accept", "application/json")
             .header("Nav-Call-Id", callId)
