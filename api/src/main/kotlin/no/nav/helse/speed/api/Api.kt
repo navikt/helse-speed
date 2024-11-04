@@ -1,7 +1,6 @@
 package no.nav.helse.speed.api
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.github.navikt.tbd_libs.naisful.FeilResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
@@ -37,6 +36,10 @@ fun Route.api(identtjeneste: Identtjeneste) {
                     PersonResultat.Person.Kjønn.MANN -> PersonResponse.Kjønn.MANN
                     PersonResultat.Person.Kjønn.KVINNE -> PersonResponse.Kjønn.KVINNE
                     PersonResultat.Person.Kjønn.UKJENT -> PersonResponse.Kjønn.UKJENT
+                },
+                kilde = when (svar.kilde) {
+                    Kilde.CACHE -> KildeResponse.CACHE
+                    Kilde.PDL -> KildeResponse.PDL
                 }
             ))
         }
@@ -54,8 +57,8 @@ fun Route.api(identtjeneste: Identtjeneste) {
                     aktørId = svar.aktørId,
                     npid = svar.npid,
                     kilde = when (svar.kilde) {
-                        IdenterResultat.Kilde.CACHE -> KildeResponse.CACHE
-                        IdenterResultat.Kilde.PDL -> KildeResponse.PDL
+                        Kilde.CACHE -> KildeResponse.CACHE
+                        Kilde.PDL -> KildeResponse.PDL
                     }
                 ))
             }
@@ -77,7 +80,11 @@ fun Route.api(identtjeneste: Identtjeneste) {
             HistoriskeIdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
             is HistoriskeIdenterResultat.Feilmelding -> throw Exception(svar.melding, svar.årsak)
             is HistoriskeIdenterResultat.Identer -> call.respond(HttpStatusCode.OK, IdenterResponse(
-                fødselsnumre = svar.fødselsnumre
+                fødselsnumre = svar.fødselsnumre,
+                kilde = when (svar.kilde) {
+                    Kilde.CACHE -> KildeResponse.CACHE
+                    Kilde.PDL -> KildeResponse.PDL
+                }
             ))
         }
     }
@@ -92,7 +99,8 @@ data class SlettIdentRequest(val identer: List<String>)
 data class SlettResponse(val status: String)
 
 data class IdenterResponse(
-    val fødselsnumre: List<String>
+    val fødselsnumre: List<String>,
+    val kilde: KildeResponse
 )
 data class IdentResponse(
     val fødselsnummer: String,
@@ -111,7 +119,8 @@ data class PersonResponse(
     val mellomnavn: String?,
     val etternavn: String,
     val adressebeskyttelse: Adressebeskyttelse,
-    val kjønn: Kjønn
+    val kjønn: Kjønn,
+    val kilde: KildeResponse
 ) {
     enum class Adressebeskyttelse {
         FORTROLIG, STRENGT_FORTROLIG, STRENGT_FORTROLIG_UTLAND, UGRADERT

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.naisful.NaisEndpoints
 import com.github.navikt.tbd_libs.naisful.test.TestContext
 import com.github.navikt.tbd_libs.naisful.test.naisfulTestApp
-import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -34,7 +33,8 @@ class E2ETest {
                 mellomnavn = "MELLOM",
                 etternavn = "FISK",
                 adressebeskyttelse = Adressebeskyttelse.UGRADERT,
-                kjønn = PersonResultat.Person.Kjønn.MANN
+                kjønn = PersonResultat.Person.Kjønn.MANN,
+                kilde = Kilde.PDL
             )
         }
         speedTestApp(identtjeneste) {
