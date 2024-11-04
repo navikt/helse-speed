@@ -83,8 +83,8 @@ class PdlClient(
                 convertResponseBody<PdlHentIdenterResponse>(it)
             }
             .map {
-                val identer = it.data.hentIdenter.identer
-                if (identer.isEmpty()) PdlIdenterResultat.FantIkkeIdenter.ok()
+                val identer = it.data.hentIdenter?.identer
+                if (identer == null || identer.isEmpty()) PdlIdenterResultat.FantIkkeIdenter.ok()
                 else {
                     val (historiske, gjeldende) = identer.partition { it.historisk }
                     PdlIdenterResultat.Identer(
@@ -116,7 +116,7 @@ data class PdlHentIdenterResponse(
     val data: PdlHentIdenter
 ) {
     data class PdlHentIdenter(
-        val hentIdenter: Identer
+        val hentIdenter: Identer?
     )
     data class Identer(
         val identer: List<Ident>
