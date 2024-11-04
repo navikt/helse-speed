@@ -3,6 +3,7 @@ package no.nav.helse.speed.api
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
 import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.helse.speed.api.IdenterResultat.FantIkkeIdenter
 import no.nav.helse.speed.api.IdenterResultat.Identer
@@ -82,7 +83,7 @@ class Identtjeneste(
                     ?.also { logg.info("hentet svar fra mellomlager") }
                     ?.let { objectMapper.readTree(it) }
                     ?.let { objectMapper.convertValue<T>(it) }
-                    ?.also { økTeller("lese") }
+                    ?.also { Metrikkverdi(T::class.simpleName ?: "UKJENT", Metrikkverdi.Oppslagoperasjon.LESE).økTeller(meterRegistry) }
             }
         } catch (err: Exception) {
             sikkerlogg.error("Kunne ikke koble til jedis, fall-backer til ingen cache: ${err.message}", err)
@@ -151,24 +152,33 @@ class Identtjeneste(
         lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_IDENTOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
     }
 
-    private fun <T> lagreTilMellomlager(cacheKey: String, resultat: T) {
+    private inline fun <reified T> lagreTilMellomlager(cacheKey: String, resultat: T) {
         try {
             jedisPool.resource.use { jedis ->
                 logg.info("lagrer pdl-svar i mellomlager")
                 jedis.set(cacheKey, objectMapper.writeValueAsString(resultat), SetParams.setParams().ex(IDENT_EXPIRATION_SECONDS))
             }
-            økTeller("skrive")
+            Metrikkverdi(T::class.simpleName ?: "UKJENT", Metrikkverdi.Oppslagoperasjon.SKRIVE).økTeller(meterRegistry)
         } catch (err: Exception) {
             sikkerlogg.error("Kunne ikke koble til jedis, fall-backer til ingen cache: ${err.message}", err)
         }
     }
 
-    private fun økTeller(operasjon: String) {
-        Counter.builder("cachebruk")
-            .description("Teller hvor mange ganger vi bruker cachen")
-            .tag("operasjon", operasjon)
-            .register(meterRegistry)
-            .increment()
+    data class Metrikkverdi(
+        val oppslag: String,
+        val operasjon: Oppslagoperasjon
+    ) {
+        enum class Oppslagoperasjon { LESE, SKRIVE }
+
+        fun økTeller(meterRegistry: MeterRegistry) {
+            Counter.builder("cachebruk")
+                .description("Teller hvor mange ganger vi bruker cachen")
+                .tag("operasjon", operasjon.name.lowercase())
+                .tag("oppslag", oppslag)
+                .register(meterRegistry)
+                .increment()
+        }
+
     }
 
     @OptIn(ExperimentalStdlibApi::class)
