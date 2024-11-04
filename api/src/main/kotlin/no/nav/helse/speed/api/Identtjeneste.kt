@@ -1,7 +1,10 @@
 package no.nav.helse.speed.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.convertValue
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.map
+import com.github.navikt.tbd_libs.result_object.ok
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
@@ -24,27 +27,15 @@ class Identtjeneste(
     private val objectMapper: ObjectMapper,
     private val meterRegistry: PrometheusMeterRegistry
 ) {
-    fun hentPerson(ident: String, callId: String): PersonResultat {
-        return try {
-            hentPersonFraMellomlager(ident) ?: hentPersonFraPDL(ident, callId)
-        } catch (err: Exception) {
-            PersonResultat.Feilmelding(err.message ?: "Ukjent feil", err)
-        }
+    fun hentPerson(ident: String, callId: String): Result<PersonResultat> {
+        return hentPersonFraMellomlager(ident) ?: hentPersonFraPDL(ident, callId)
     }
-    fun hentFødselsnummerOgAktørId(ident: String, callId: String): IdenterResultat {
-        return try {
-            hentIdentFraMellomlager(ident) ?: hentFraPDL(ident, callId) ?: FantIkkeIdenter
-        } catch (err: Exception) {
-            IdenterResultat.Feilmelding(err.message ?: "Ukjent feil", err)
-        }
+    fun hentFødselsnummerOgAktørId(ident: String, callId: String): Result<IdenterResultat> {
+        return hentIdentFraMellomlager(ident) ?: hentFraPDL(ident, callId)
     }
 
-    fun hentHistoriskeFolkeregisterIdenter(ident: String, callId: String): HistoriskeIdenterResultat {
-        return try {
-            hentHistoriskeIdenterFraMellomlager(ident) ?: hentHistoriskeIdenterFraPDL(ident, callId)
-        } catch (err: Exception) {
-            HistoriskeIdenterResultat.Feilmelding(err.message ?: "Ukjent feil", err)
-        }
+    fun hentHistoriskeFolkeregisterIdenter(ident: String, callId: String): Result<HistoriskeIdenterResultat> {
+        return hentHistoriskeIdenterFraMellomlager(ident) ?: hentHistoriskeIdenterFraPDL(ident, callId)
     }
 
     fun tømFraMellomlager(identer: List<String>): SlettResultat {
@@ -66,23 +57,22 @@ class Identtjeneste(
         }
     }
 
-    private fun hentPersonFraMellomlager(ident: String): PersonResultat.Person? {
-        return hentFraMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_PERSONINFOOPPSLAG, ident))
+    private fun hentPersonFraMellomlager(ident: String): Result.Ok<PersonResultat.Person>? {
+        return hentFraMellomlager<PersonResultat.Person>(mellomlagringsnøkkel(CACHE_PREFIX_PERSONINFOOPPSLAG, ident))
     }
-    private fun hentIdentFraMellomlager(ident: String): Identer? {
-        return hentFraMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_IDENTOPPSLAG, ident))
+    private fun hentIdentFraMellomlager(ident: String): Result.Ok<Identer>? {
+        return hentFraMellomlager<Identer>(mellomlagringsnøkkel(CACHE_PREFIX_IDENTOPPSLAG, ident))
     }
-    private fun hentHistoriskeIdenterFraMellomlager(ident: String): HistoriskeIdenterResultat.Identer? {
-        return hentFraMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_HISTORISKE_IDENTEROPPSLAG, ident))
+    private fun hentHistoriskeIdenterFraMellomlager(ident: String): Result.Ok<HistoriskeIdenterResultat.Identer>? {
+        return hentFraMellomlager<HistoriskeIdenterResultat.Identer>(mellomlagringsnøkkel(CACHE_PREFIX_HISTORISKE_IDENTEROPPSLAG, ident))
     }
 
-    private inline fun <reified T> hentFraMellomlager(cacheKey: String): T? {
+    private inline fun <reified T> hentFraMellomlager(cacheKey: String): Result.Ok<T>? {
         return try {
             jedisPool.resource.use { jedis ->
                 jedis.get(cacheKey)
                     ?.also { logg.info("hentet svar fra mellomlager") }
-                    ?.let { objectMapper.readTree(it) }
-                    ?.let { objectMapper.convertValue<T>(it) }
+                    ?.let { objectMapper.readValue<T>(it).ok() }
                     ?.also { Metrikkverdi(T::class.simpleName ?: "UKJENT", Metrikkverdi.Oppslagoperasjon.LESE).økTeller(meterRegistry) }
             }
         } catch (err: Exception) {
@@ -91,52 +81,60 @@ class Identtjeneste(
         }
     }
 
-    private fun hentHistoriskeIdenterFraPDL(ident: String, callId: String): HistoriskeIdenterResultat {
-        return when (val svar = pdlClient.hentAlleIdenter(ident, callId)) {
-            PdlIdenterResultat.FantIkkeIdenter -> HistoriskeIdenterResultat.FantIkkeIdenter
-            is PdlIdenterResultat.Identer -> HistoriskeIdenterResultat.Identer(
-                fødselsnumre = svar.historiske.filterIsInstance<Ident.Fødselsnummer>().map { it.ident },
-                kilde = Kilde.PDL
-            ).also {
-                lagreHistoriskeIdenterTilMellomlager(ident, it)
+    private fun hentHistoriskeIdenterFraPDL(ident: String, callId: String): Result<HistoriskeIdenterResultat> {
+        return pdlClient.hentAlleIdenter(ident, callId).map { identer ->
+            when (identer) {
+                PdlIdenterResultat.FantIkkeIdenter -> HistoriskeIdenterResultat.FantIkkeIdenter.ok()
+                is PdlIdenterResultat.Identer -> HistoriskeIdenterResultat.Identer(
+                    fødselsnumre = identer.historiske.filterIsInstance<Ident.Fødselsnummer>().map { it.ident },
+                    kilde = Kilde.PDL
+                ).also {
+                    lagreHistoriskeIdenterTilMellomlager(ident, it)
+                }.ok()
             }
         }
     }
 
-    private fun hentPersonFraPDL(ident: String, callId: String): PersonResultat {
-        return when (val resultat = pdlClient.hentPerson(ident, callId))  {
-            PdlPersonResultat.FantIkkePerson -> PersonResultat.FantIkkePerson
-            is PdlPersonResultat.Person -> PersonResultat.Person(
-                fødselsdato = resultat.fødselsdato,
-                dødsdato = resultat.dødsdato,
-                fornavn = resultat.fornavn,
-                mellomnavn = resultat.mellomnavn,
-                etternavn = resultat.etternavn,
-                adressebeskyttelse = when (resultat.adressebeskyttelse) {
-                    PdlPersonResultat.Person.Adressebeskyttelse.FORTROLIG -> PersonResultat.Person.Adressebeskyttelse.FORTROLIG
-                    PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG -> PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG
-                    PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND -> PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
-                    PdlPersonResultat.Person.Adressebeskyttelse.UGRADERT -> PersonResultat.Person.Adressebeskyttelse.UGRADERT
-                },
-                kjønn = when (resultat.kjønn) {
-                    PdlPersonResultat.Person.Kjønn.MANN -> PersonResultat.Person.Kjønn.MANN
-                    PdlPersonResultat.Person.Kjønn.KVINNE -> PersonResultat.Person.Kjønn.KVINNE
-                    PdlPersonResultat.Person.Kjønn.UKJENT -> PersonResultat.Person.Kjønn.UKJENT
-                },
-                kilde = Kilde.PDL
-            ).also { lagrePersonTilMellomlager(ident, it) }
+    private fun hentPersonFraPDL(ident: String, callId: String): Result<PersonResultat> {
+        return pdlClient.hentPerson(ident, callId).map { person ->
+            when (person) {
+                PdlPersonResultat.FantIkkePerson -> PersonResultat.FantIkkePerson.ok()
+                is PdlPersonResultat.Person -> PersonResultat.Person(
+                    fødselsdato = person.fødselsdato,
+                    dødsdato = person.dødsdato,
+                    fornavn = person.fornavn,
+                    mellomnavn = person.mellomnavn,
+                    etternavn = person.etternavn,
+                    adressebeskyttelse = when (person.adressebeskyttelse) {
+                        PdlPersonResultat.Person.Adressebeskyttelse.FORTROLIG -> PersonResultat.Person.Adressebeskyttelse.FORTROLIG
+                        PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG -> PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG
+                        PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND -> PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
+                        PdlPersonResultat.Person.Adressebeskyttelse.UGRADERT -> PersonResultat.Person.Adressebeskyttelse.UGRADERT
+                    },
+                    kjønn = when (person.kjønn) {
+                        PdlPersonResultat.Person.Kjønn.MANN -> PersonResultat.Person.Kjønn.MANN
+                        PdlPersonResultat.Person.Kjønn.KVINNE -> PersonResultat.Person.Kjønn.KVINNE
+                        PdlPersonResultat.Person.Kjønn.UKJENT -> PersonResultat.Person.Kjønn.UKJENT
+                    },
+                    kilde = Kilde.PDL
+                )
+                    .also { lagrePersonTilMellomlager(ident, it) }
+                    .ok()
+            }
         }
     }
 
-    private fun hentFraPDL(ident: String, callId: String): IdenterResultat? {
-        return when (val identer = pdlClient.hentIdenter(ident, callId)) {
-            is PdlIdenterResultat.Identer -> Identer(
-                fødselsnummer = identer.fødselsnummer,
-                aktørId = identer.aktørId,
-                npid = identer.npid,
-                kilde = Kilde.PDL
-            ).also { lagreIdentTilMellomlager(ident, it) }
-            is PdlIdenterResultat.FantIkkeIdenter -> FantIkkeIdenter
+    private fun hentFraPDL(ident: String, callId: String): Result<IdenterResultat> {
+        return pdlClient.hentIdenter(ident, callId).map { identer ->
+            when (identer) {
+                is PdlIdenterResultat.Identer -> Identer(
+                    fødselsnummer = identer.fødselsnummer,
+                    aktørId = identer.aktørId,
+                    npid = identer.npid,
+                    kilde = Kilde.PDL
+                ).also { lagreIdentTilMellomlager(ident, it) }.ok()
+                is PdlIdenterResultat.FantIkkeIdenter -> FantIkkeIdenter.ok()
+            }
         }
     }
 
@@ -209,7 +207,6 @@ sealed interface IdenterResultat {
     ): IdenterResultat
 
     data object FantIkkeIdenter: IdenterResultat
-    data class Feilmelding(val melding: String, val årsak: Exception): IdenterResultat
 }
 enum class Kilde {
     CACHE, PDL
@@ -220,7 +217,6 @@ sealed interface HistoriskeIdenterResultat {
         val kilde: Kilde
     ): HistoriskeIdenterResultat
     data object FantIkkeIdenter: HistoriskeIdenterResultat
-    data class Feilmelding(val melding: String, val årsak: Exception): HistoriskeIdenterResultat
 }
 
 sealed interface PersonResultat {
@@ -243,7 +239,6 @@ sealed interface PersonResultat {
     }
 
     data object FantIkkePerson: PersonResultat
-    data class Feilmelding(val melding: String, val årsak: Exception): PersonResultat
 }
 
 sealed interface SlettResultat {

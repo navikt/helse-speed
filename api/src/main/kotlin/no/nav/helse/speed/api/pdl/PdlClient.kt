@@ -5,6 +5,10 @@ import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.error
+import com.github.navikt.tbd_libs.result_object.map
+import com.github.navikt.tbd_libs.result_object.ok
 import java.time.LocalDate
 import java.net.URI
 import java.net.http.HttpClient
@@ -21,61 +25,74 @@ class PdlClient(
 
     internal fun hentIdenter(ident: String, callId: String) = hentAlleIdenter(ident, false, callId)
     internal fun hentAlleIdenter(ident: String, callId: String) = hentAlleIdenter(ident, true, callId)
-    internal fun hentPerson(ident: String, callId: String): PdlPersonResultat {
-        val response = convertResponseBody<PdlHentPersonResponse>(request(hentPersonQuery(ident), callId)).data.hentPerson
-        if (response == null) return PdlPersonResultat.FantIkkePerson
-        return PdlPersonResultat.Person(
-            fødselsdato = response.foedselsdato.first().foedselsdato,
-            // foretrekker PDL dersom flere innslag
-            dødsdato = response.doedsfall.firstOrNull { it.metadata.master.lowercase() == "pdl" }?.doedsdato ?: response.doedsfall.firstOrNull()?.doedsdato,
-            fornavn = response.navn.first().fornavn,
-            mellomnavn = response.navn.first().mellomnavn,
-            etternavn = response.navn.first().etternavn,
-            adressebeskyttelse = when (response.adressebeskyttelse.firstOrNull()?.gradering) {
-                null, PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.UGRADERT -> PdlPersonResultat.Person.Adressebeskyttelse.UGRADERT
-                PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.FORTROLIG -> PdlPersonResultat.Person.Adressebeskyttelse.FORTROLIG
-                PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG -> PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG
-                PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG_UTLAND -> PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
-            },
-            kjønn = when (response.kjoenn.first().kjoenn) {
-                PdlHentPersonResponse.Kjønn.Kjønnverdi.MANN -> PdlPersonResultat.Person.Kjønn.MANN
-                PdlHentPersonResponse.Kjønn.Kjønnverdi.KVINNE -> PdlPersonResultat.Person.Kjønn.KVINNE
-                PdlHentPersonResponse.Kjønn.Kjønnverdi.UKJENT -> PdlPersonResultat.Person.Kjønn.UKJENT
-            }
-        )
-    }
-
-    private fun request(query: PdlQueryObject, callId: String): HttpResponse<String> {
-        val bearerToken = when (val result = accessTokenClient.bearerToken(accessTokenScope)) {
-            is AzureTokenProvider.AzureTokenResult.Error -> throw PdlException("Fikk ikke token fra azure: ${result.error}", result.exception)
-            is AzureTokenProvider.AzureTokenResult.Ok -> result.azureToken.token
+    internal fun hentPerson(ident: String, callId: String): Result<PdlPersonResultat> {
+        return request(hentPersonQuery(ident), callId).map {
+            convertResponseBody<PdlHentPersonResponse>(it)
+        }.map {
+            val person = it.data.hentPerson
+            if (person == null) PdlPersonResultat.FantIkkePerson.ok()
+            else PdlPersonResultat.Person(
+                fødselsdato = person.foedselsdato.first().foedselsdato,
+                // foretrekker PDL dersom flere innslag
+                dødsdato = person.doedsfall.firstOrNull { it.metadata.master.lowercase() == "pdl" }?.doedsdato ?: person.doedsfall.firstOrNull()?.doedsdato,
+                fornavn = person.navn.first().fornavn,
+                mellomnavn = person.navn.first().mellomnavn,
+                etternavn = person.navn.first().etternavn,
+                adressebeskyttelse = when (person.adressebeskyttelse.firstOrNull()?.gradering) {
+                    null, PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.UGRADERT -> PdlPersonResultat.Person.Adressebeskyttelse.UGRADERT
+                    PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.FORTROLIG -> PdlPersonResultat.Person.Adressebeskyttelse.FORTROLIG
+                    PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG -> PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG
+                    PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG_UTLAND -> PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
+                },
+                kjønn = when (person.kjoenn.first().kjoenn) {
+                    PdlHentPersonResponse.Kjønn.Kjønnverdi.MANN -> PdlPersonResultat.Person.Kjønn.MANN
+                    PdlHentPersonResponse.Kjønn.Kjønnverdi.KVINNE -> PdlPersonResultat.Person.Kjønn.KVINNE
+                    PdlHentPersonResponse.Kjønn.Kjønnverdi.UKJENT -> PdlPersonResultat.Person.Kjønn.UKJENT
+                }
+            ).ok()
         }
-        val body = objectMapper.writeValueAsString(query)
-        val request = HttpRequest.newBuilder(URI.create(baseUrl))
-            .header("TEMA", "SYK")
-            .header("Authorization", "Bearer ${bearerToken}")
-            .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
-            .header("Nav-Call-Id", callId)
-            .header("behandlingsnummer", "B139")
-            .POST(HttpRequest.BodyPublishers.ofString(body))
-            .build()
-        val responseHandler = HttpResponse.BodyHandlers.ofString()
-
-        val response = httpClient.send(request, responseHandler)
-        if (response.statusCode() != 200) throw PdlException("error (responseCode=${response.statusCode()}) from PDL")
-
-        return response
     }
 
-    private fun hentAlleIdenter(ident: String, historisk: Boolean, callId: String): PdlIdenterResultat {
-        val response = convertResponseBody<PdlHentIdenterResponse>(request(hentIdenterQuery(ident, historisk), callId)).data.hentIdenter.identer
-        if (response.isEmpty()) return PdlIdenterResultat.FantIkkeIdenter
-        val (historiske, gjeldende) = response.partition { it.historisk }
-        return PdlIdenterResultat.Identer(
-            gjeldende = gjeldende.map(::mapIdent),
-            historiske = historiske.map(::mapIdent)
-        )
+    private fun request(query: PdlQueryObject, callId: String): Result<HttpResponse<String>> {
+        return accessTokenClient.bearerToken(accessTokenScope).map { azureToken ->
+            try {
+                val body = objectMapper.writeValueAsString(query)
+                val request = HttpRequest.newBuilder(URI.create(baseUrl))
+                    .header("TEMA", "SYK")
+                    .header("Authorization", "Bearer ${azureToken.token}")
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .header("Nav-Call-Id", callId)
+                    .header("behandlingsnummer", "B139")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build()
+                val responseHandler = HttpResponse.BodyHandlers.ofString()
+
+                val response = httpClient.send(request, responseHandler)
+                if (response.statusCode() != 200) "error (responseCode=${response.statusCode()}) from PDL".error()
+                else response.ok()
+            } catch (err: Exception) {
+                err.error("Feil ved sending av http request")
+            }
+        }
+    }
+
+    private fun hentAlleIdenter(ident: String, historisk: Boolean, callId: String): Result<PdlIdenterResultat> {
+        return request(hentIdenterQuery(ident, historisk), callId)
+            .map {
+                convertResponseBody<PdlHentIdenterResponse>(it)
+            }
+            .map {
+                val identer = it.data.hentIdenter.identer
+                if (identer.isEmpty()) PdlIdenterResultat.FantIkkeIdenter.ok()
+                else {
+                    val (historiske, gjeldende) = identer.partition { it.historisk }
+                    PdlIdenterResultat.Identer(
+                        gjeldende = gjeldende.map(::mapIdent),
+                        historiske = historiske.map(::mapIdent)
+                    ).ok()
+                }
+            }
     }
 
     private fun mapIdent(ident: PdlHentIdenterResponse.Ident) =
@@ -85,16 +102,14 @@ class PdlClient(
             PdlHentIdenterResponse.Identgruppe.NPID -> Ident.NPID(ident.ident)
         }
 
-    private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): T {
+    private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): Result<T> {
         return try {
-            objectMapper.readValue<T>(response.body())
+            objectMapper.readValue<T>(response.body()).ok()
         } catch (err: Exception) {
-            throw PdlException(err.message ?: "JSON parsing error", err)
+            err.error(err.message ?: "JSON parsing error")
         }
     }
 }
-
-class PdlException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class PdlHentIdenterResponse(

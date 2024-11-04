@@ -1,6 +1,7 @@
 package no.nav.helse.speed.api
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.github.navikt.tbd_libs.result_object.Result
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
@@ -18,30 +19,32 @@ fun Route.api(identtjeneste: Identtjeneste) {
         val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
         when (val svar = identtjeneste.hentPerson(request.ident, callId)) {
-            PersonResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
-            is PersonResultat.Feilmelding -> throw Exception(svar.melding, svar.årsak)
-            is PersonResultat.Person -> call.respond(HttpStatusCode.OK, PersonResponse(
-                fødselsdato = svar.fødselsdato,
-                dødsdato = svar.dødsdato,
-                fornavn = svar.fornavn,
-                mellomnavn = svar.mellomnavn,
-                etternavn = svar.etternavn,
-                adressebeskyttelse = when (svar.adressebeskyttelse) {
-                    PersonResultat.Person.Adressebeskyttelse.FORTROLIG -> PersonResponse.Adressebeskyttelse.FORTROLIG
-                    PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG -> PersonResponse.Adressebeskyttelse.STRENGT_FORTROLIG
-                    PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND -> PersonResponse.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
-                    PersonResultat.Person.Adressebeskyttelse.UGRADERT -> PersonResponse.Adressebeskyttelse.UGRADERT
-                },
-                kjønn = when (svar.kjønn) {
-                    PersonResultat.Person.Kjønn.MANN -> PersonResponse.Kjønn.MANN
-                    PersonResultat.Person.Kjønn.KVINNE -> PersonResponse.Kjønn.KVINNE
-                    PersonResultat.Person.Kjønn.UKJENT -> PersonResponse.Kjønn.UKJENT
-                },
-                kilde = when (svar.kilde) {
-                    Kilde.CACHE -> KildeResponse.CACHE
-                    Kilde.PDL -> KildeResponse.PDL
-                }
-            ))
+            is Result.Error -> throw Exception(svar.error, svar.cause)
+            is Result.Ok -> when (val person = svar.value) {
+                PersonResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
+                is PersonResultat.Person -> call.respond(HttpStatusCode.OK, PersonResponse(
+                    fødselsdato = person.fødselsdato,
+                    dødsdato = person.dødsdato,
+                    fornavn = person.fornavn,
+                    mellomnavn = person.mellomnavn,
+                    etternavn = person.etternavn,
+                    adressebeskyttelse = when (person.adressebeskyttelse) {
+                        PersonResultat.Person.Adressebeskyttelse.FORTROLIG -> PersonResponse.Adressebeskyttelse.FORTROLIG
+                        PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG -> PersonResponse.Adressebeskyttelse.STRENGT_FORTROLIG
+                        PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND -> PersonResponse.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
+                        PersonResultat.Person.Adressebeskyttelse.UGRADERT -> PersonResponse.Adressebeskyttelse.UGRADERT
+                    },
+                    kjønn = when (person.kjønn) {
+                        PersonResultat.Person.Kjønn.MANN -> PersonResponse.Kjønn.MANN
+                        PersonResultat.Person.Kjønn.KVINNE -> PersonResponse.Kjønn.KVINNE
+                        PersonResultat.Person.Kjønn.UKJENT -> PersonResponse.Kjønn.UKJENT
+                    },
+                    kilde = when (person.kilde) {
+                        Kilde.CACHE -> KildeResponse.CACHE
+                        Kilde.PDL -> KildeResponse.PDL
+                    }
+                ))
+            }
         }
     }
     route("/api/ident") {
@@ -50,17 +53,19 @@ fun Route.api(identtjeneste: Identtjeneste) {
             val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
 
             when (val svar = identtjeneste.hentFødselsnummerOgAktørId(request.ident, callId)) {
-                IdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
-                is IdenterResultat.Feilmelding -> throw Exception(svar.melding, svar.årsak)
-                is IdenterResultat.Identer -> call.respond(HttpStatusCode.OK, IdentResponse(
-                    fødselsnummer = svar.fødselsnummer,
-                    aktørId = svar.aktørId,
-                    npid = svar.npid,
-                    kilde = when (svar.kilde) {
-                        Kilde.CACHE -> KildeResponse.CACHE
-                        Kilde.PDL -> KildeResponse.PDL
-                    }
-                ))
+                is Result.Error -> throw Exception(svar.error, svar.cause)
+                is Result.Ok -> when (val identer = svar.value) {
+                    IdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
+                    is IdenterResultat.Identer -> call.respond(HttpStatusCode.OK, IdentResponse(
+                        fødselsnummer = identer.fødselsnummer,
+                        aktørId = identer.aktørId,
+                        npid = identer.npid,
+                        kilde = when (identer.kilde) {
+                            Kilde.CACHE -> KildeResponse.CACHE
+                            Kilde.PDL -> KildeResponse.PDL
+                        }
+                    ))
+                }
             }
         }
 
@@ -77,15 +82,17 @@ fun Route.api(identtjeneste: Identtjeneste) {
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
 
         when (val svar = identtjeneste.hentHistoriskeFolkeregisterIdenter(request.ident, callId)) {
-            HistoriskeIdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
-            is HistoriskeIdenterResultat.Feilmelding -> throw Exception(svar.melding, svar.årsak)
-            is HistoriskeIdenterResultat.Identer -> call.respond(HttpStatusCode.OK, IdenterResponse(
-                fødselsnumre = svar.fødselsnumre,
-                kilde = when (svar.kilde) {
-                    Kilde.CACHE -> KildeResponse.CACHE
-                    Kilde.PDL -> KildeResponse.PDL
-                }
-            ))
+            is Result.Error -> throw Exception(svar.error, svar.cause)
+            is Result.Ok -> when (val identer = svar.value) {
+                HistoriskeIdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
+                is HistoriskeIdenterResultat.Identer -> call.respond(HttpStatusCode.OK, IdenterResponse(
+                    fødselsnumre = identer.fødselsnumre,
+                    kilde = when (identer.kilde) {
+                        Kilde.CACHE -> KildeResponse.CACHE
+                        Kilde.PDL -> KildeResponse.PDL
+                    }
+                ))
+            }
         }
     }
 

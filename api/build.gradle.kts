@@ -21,7 +21,6 @@ dependencies {
 
     api("com.github.navikt.tbd-libs:naisful-app:$tbdLibsVersion")
     api("com.github.navikt.tbd-libs:azure-token-client-default:$tbdLibsVersion")
-    api("com.github.navikt.tbd-libs:retry:$tbdLibsVersion")
 
     testImplementation("com.github.navikt.tbd-libs:naisful-test-app:$tbdLibsVersion")
     testImplementation("com.github.navikt.tbd-libs:mock-http-client:$tbdLibsVersion")

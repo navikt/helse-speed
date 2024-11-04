@@ -6,7 +6,6 @@ val avroVersion = "1.12.0"
 dependencies {
     api("com.github.navikt:rapids-and-rivers:$rapidsAndRiversVersion")
     api("com.github.navikt.tbd-libs:azure-token-client-default:$tbdLibsVersion")
-    api("com.github.navikt.tbd-libs:retry:$tbdLibsVersion")
     api("com.github.navikt.tbd-libs:speed-client:$tbdLibsVersion")
 
     api("org.apache.avro:avro:$avroVersion")

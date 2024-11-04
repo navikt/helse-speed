@@ -30,7 +30,12 @@ val azure = createAzureTokenClientFromEnvironment(env)
 val speedClient = SpeedClient(httpClient, jacksonObjectMapper().registerModule(JavaTimeModule()), azure)
 
 // bruker retry-biblioteket for retries
-val identer = retryBlocking { speedClient.hentFødselsnummerOgAktørId("identen man søker på", callId) }
+val identer = retryBlocking {
+    when (val svar = speedClient.hentFødselsnummerOgAktørId("identen man søker på", callId)) {
+        is Result.Error -> throw RuntimeException(svar.error, svar.cause)
+        is Result.Ok -> svar.value
+    }
+}
 ```
 
 ## API
