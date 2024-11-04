@@ -42,10 +42,11 @@ class FolkeregisteridentifikatorRiver(
                 records.forEach { it ->
                     val record = it.value()
                     val opplysningstype = record.get("opplysningstype").toString()
-                    if (opplysningstype == "FOLKEREGISTERIDENTIFIKATOR_V1") {
-                        val callId = UUID.randomUUID().toString()
-                        withMDC("callId" to callId) {
-                            håndterFolkeregisteridentifikatorOpplysning(record, callId)
+                    val callId = UUID.randomUUID().toString()
+                    withMDC("callId" to callId) {
+                        when (opplysningstype) {
+                            "FOLKEREGISTERIDENTIFIKATOR_V1" -> håndterFolkeregisteridentifikatorOpplysning(record, callId)
+                            else -> håndterGenerellOpplysning(opplysningstype, record, callId)
                         }
                     }
                 }
@@ -63,15 +64,26 @@ class FolkeregisteridentifikatorRiver(
 
     private fun håndterFolkeregisteridentifikatorOpplysning(record: GenericRecord, callId: String) {
         sikkerlogg.info("mottok melding om folkeregisteridentifikator:\n$record")
-
         val folkeregisteridentifikator = record.get("Folkeregisteridentifikator")
         if (folkeregisteridentifikator !is GenericData.Record) return
         val ident = folkeregisteridentifikator["identifikasjonsnummer"].toString()
+        tømMellomlager(record, ident, callId)
+    }
+
+    private fun håndterGenerellOpplysning(opplysningstype: String, record: GenericRecord, callId: String) {
+        sikkerlogg.info("mottok melding om $opplysningstype:\n$record")
+        tømMellomlager(record, null, callId)
+    }
+
+    private fun tømMellomlager(record: GenericRecord, ident: String? = null, callId: String) {
         val personidenter = record.get("personidenter")
 
         val identer = buildList<String> {
-            add(ident)
             if (personidenter is List<*>) personidenter.forEach { add("$it") }
+            if (ident != null) {
+                sikkerlogg.info("identen er i listen fra før: {}", any { it == ident }.toString())
+                add(ident)
+            }
         }
         sikkerlogg.info("tømmer mellomlager for identene: $identer")
         speedClient.tømMellomlager(identer, callId)
