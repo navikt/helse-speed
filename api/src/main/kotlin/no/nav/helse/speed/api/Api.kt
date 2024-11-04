@@ -16,10 +16,7 @@ import java.time.LocalDate
 
 fun Route.api(identtjeneste: Identtjeneste) {
     post("/api/person") {
-        val request = call.receiveNullable<IdentRequest>() ?: return@post call.respond(HttpStatusCode.BadRequest, FeilResponse(
-            feilmelding = "Ugyldig request",
-            callId = call.callId
-        ))
+        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
         when (val svar = identtjeneste.hentPerson(request.ident, callId)) {
             PersonResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
@@ -46,10 +43,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
     }
     route("/api/ident") {
         post {
-            val request = call.receiveNullable<IdentRequest>() ?: return@post call.respond(HttpStatusCode.BadRequest, FeilResponse(
-                feilmelding = "Ugyldig request",
-                callId = call.callId
-            ))
+            val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
             val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
 
             when (val svar = identtjeneste.hentFødselsnummerOgAktørId(request.ident, callId)) {
@@ -68,10 +62,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
         }
 
         delete {
-            val request = call.receiveNullable<SlettIdentRequest>() ?: return@delete call.respond(HttpStatusCode.BadRequest, FeilResponse(
-                feilmelding = "Ugyldig request",
-                callId = call.callId
-            ))
+            val request = call.receiveNullable<SlettIdentRequest>() ?: throw BadRequestException("Mangler identer")
             when (val svar = identtjeneste.tømFraMellomlager(request.identer)) {
                 SlettResultat.Ok -> call.respond(HttpStatusCode.OK, SlettResponse("OK"))
                 is SlettResultat.Feilmelding -> throw Exception(svar.melding, svar.årsak)
@@ -79,10 +70,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
         }
     }
     post("/api/historiske_identer") {
-        val request = call.receiveNullable<IdentRequest>() ?: return@post call.respond(HttpStatusCode.BadRequest, FeilResponse(
-            feilmelding = "Ugyldig request",
-            callId = call.callId
-        ))
+        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
 
         when (val svar = identtjeneste.hentHistoriskeFolkeregisterIdenter(request.ident, callId)) {
