@@ -80,6 +80,7 @@ class Identtjeneste(
             jedisPool.resource.use { jedis ->
                 jedis.get(cacheKey)
                     ?.also { logg.info("hentet svar fra mellomlager") }
+                    ?.let { objectMapper.readTree(it) }
                     ?.let { objectMapper.convertValue<T>(it) }
                     ?.also { økTeller("lese") }
             }
