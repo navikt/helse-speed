@@ -8,11 +8,14 @@ import com.github.navikt.tbd_libs.result_object.ok
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytning
+import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.*
 import no.nav.helse.speed.api.IdenterResultat.FantIkkeIdenter
 import no.nav.helse.speed.api.IdenterResultat.Identer
 import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemåltype
 import no.nav.helse.speed.api.pdl.Ident
 import no.nav.helse.speed.api.pdl.PdlClient
+import no.nav.helse.speed.api.pdl.PdlGeografiskTilknytningResultat
 import no.nav.helse.speed.api.pdl.PdlIdenterResultat
 import no.nav.helse.speed.api.pdl.PdlPersonResultat
 import no.nav.helse.speed.api.pdl.PdlVergemålEllerFremtidsfullmaktResultat
@@ -40,8 +43,11 @@ class Identtjeneste(
     fun hentHistoriskeFolkeregisterIdenter(ident: String, callId: String): Result<HistoriskeIdenterResultat> {
         return hentHistoriskeIdenterFraMellomlager(ident) ?: hentHistoriskeIdenterFraPDL(ident, callId)
     }
-    fun  hentVergemålEllerFremtidsfullmakt(ident: String, callId: String): Result<VergemålEllerFremtidsfullmaktResultat> {
+    fun hentVergemålEllerFremtidsfullmakt(ident: String, callId: String): Result<VergemålEllerFremtidsfullmaktResultat> {
         return hentVergemålEllerFremtidsfullmaktFraMellomlager(ident) ?: hentVergemålEllerFremtidsfullmaktFraPDL(ident, callId)
+    }
+    fun hentGeografiskTilknytning(ident: String, callId: String): Result<GeografiskTilknytningResultat> {
+        return hentGeografiskTilknytningFraMellomlager(ident) ?: hentGeografiskTilknytningFraPDL(ident, callId)
     }
 
     fun tømFraMellomlager(identer: List<String>): SlettResultat {
@@ -52,7 +58,9 @@ class Identtjeneste(
                         listOf(
                             mellomlagringsnøkkel(CACHE_PREFIX_IDENTOPPSLAG, it),
                             mellomlagringsnøkkel(CACHE_PREFIX_PERSONINFOOPPSLAG, it),
-                            mellomlagringsnøkkel(CACHE_PREFIX_HISTORISKE_IDENTEROPPSLAG, it)
+                            mellomlagringsnøkkel(CACHE_PREFIX_HISTORISKE_IDENTEROPPSLAG, it),
+                            mellomlagringsnøkkel(CACHE_PREFIX_VERGEMÅLOPPSLAG, it),
+                            mellomlagringsnøkkel(CACHE_PREFIX_GEOGRAFISK_TILKNYTNINGOPPSLAG, it),
                         )
                     }
                     .forEach { jedis.del(it) }
@@ -75,6 +83,8 @@ class Identtjeneste(
     private fun hentVergemålEllerFremtidsfullmaktFraMellomlager(ident: String): Result.Ok<VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt>? {
         return hentFraMellomlager<VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt>(mellomlagringsnøkkel(CACHE_PREFIX_VERGEMÅLOPPSLAG, ident))
     }
+    private fun hentGeografiskTilknytningFraMellomlager(ident: String) =
+        hentFraMellomlager<GeografiskTilknytning>(mellomlagringsnøkkel(CACHE_PREFIX_GEOGRAFISK_TILKNYTNINGOPPSLAG, ident))
 
     private inline fun <reified T> hentFraMellomlager(cacheKey: String): Result.Ok<T>? {
         return try {
@@ -174,6 +184,53 @@ class Identtjeneste(
         }
     }
 
+    private fun hentGeografiskTilknytningFraPDL(ident: String, callId: String): Result<GeografiskTilknytningResultat> {
+        return pdlClient.hentGeografiskTilknytning(ident, callId).map {
+            mapGeografiskTilknytningFraPDL(it)
+                .also { lagreGeografiskTilknytningTilMellomlager(ident, it) }
+                .ok()
+        }
+    }
+
+    private fun mapGeografiskTilknytningFraPDL(svar: PdlGeografiskTilknytningResultat) =
+        when (svar) {
+            is PdlGeografiskTilknytningResultat.Bydel -> GeografiskTilknytning(
+                type = BYDEL,
+                land = null,
+                kommune = null,
+                bydel = svar.bydel,
+                kilde = Kilde.PDL
+            )
+            is PdlGeografiskTilknytningResultat.Kommune -> GeografiskTilknytning(
+                type = KOMMUNE,
+                land = null,
+                kommune = svar.kommune,
+                bydel = null,
+                kilde = Kilde.PDL
+            )
+            PdlGeografiskTilknytningResultat.Udefinert -> GeografiskTilknytning(
+                type = UDEFINERT,
+                land = null,
+                kommune = null,
+                bydel = null,
+                kilde = Kilde.PDL
+            )
+            is PdlGeografiskTilknytningResultat.Utland -> GeografiskTilknytning(
+                type = UTLAND,
+                land = svar.land,
+                kommune = null,
+                bydel = null,
+                kilde = Kilde.PDL
+            )
+            PdlGeografiskTilknytningResultat.UtlandUkjentLand -> GeografiskTilknytning(
+                type = UTLAND_UKJENT,
+                land = null,
+                kommune = null,
+                bydel = null,
+                kilde = Kilde.PDL
+            )
+        }
+
     private fun lagrePersonTilMellomlager(ident: String, resultat: PersonResultat.Person) {
         lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_PERSONINFOOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
     }
@@ -187,6 +244,9 @@ class Identtjeneste(
 
     private fun lagreIdentTilMellomlager(ident: String, resultat: Identer) {
         lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_IDENTOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
+    }
+    private fun lagreGeografiskTilknytningTilMellomlager(ident: String, resultat: GeografiskTilknytning) {
+        lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_GEOGRAFISK_TILKNYTNINGOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
     }
 
     private inline fun <reified T> lagreTilMellomlager(cacheKey: String, resultat: T) {
@@ -231,6 +291,7 @@ class Identtjeneste(
         private const val CACHE_PREFIX_PERSONINFOOPPSLAG = "personinfo_"
         private const val CACHE_PREFIX_HISTORISKE_IDENTEROPPSLAG = "historiske_identer_"
         private const val CACHE_PREFIX_VERGEMÅLOPPSLAG = "vergemaal_"
+        private const val CACHE_PREFIX_GEOGRAFISK_TILKNYTNINGOPPSLAG = "geografisk_"
         private val IDENT_EXPIRATION_SECONDS: Long = Duration.ofDays(7).toSeconds()
 
         private val logg = LoggerFactory.getLogger(this::class.java)
@@ -280,7 +341,23 @@ sealed interface PersonResultat {
 
     data object FantIkkePerson: PersonResultat
 }
-
+sealed interface GeografiskTilknytningResultat {
+    data class GeografiskTilknytning(
+        val type: GeografiskTilknytningType,
+        val land: String?,
+        val kommune: String?,
+        val bydel: String?,
+        val kilde: Kilde
+    ) : GeografiskTilknytningResultat {
+        enum class GeografiskTilknytningType {
+            BYDEL, // bydel er ikke null
+            KOMMUNE, // kommune er ikke null
+            UTLAND,  // land er ikke null
+            UTLAND_UKJENT, // land er null
+            UDEFINERT // alt er null
+        }
+    }
+}
 sealed interface VergemålEllerFremtidsfullmaktResultat {
     data class VergemålEllerFremtidsfullmakt(
         val vergemålEllerFremtidsfullmakter: List<Vergemål>,

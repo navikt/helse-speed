@@ -130,6 +130,33 @@ fun Route.api(identtjeneste: Identtjeneste) {
         }
     }
 
+    post("/api/geografisk_tilknytning") {
+        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
+        val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
+
+        when (val svar = identtjeneste.hentGeografiskTilknytning(request.ident, callId)) {
+            is Result.Error -> throw Exception(svar.error, svar.cause)
+            is Result.Ok -> when (val geografiskTilknytning = svar.value) {
+                is GeografiskTilknytningResultat.GeografiskTilknytning -> call.respond(HttpStatusCode.OK, GeografiskTilknytningResponse(
+                    type = when (geografiskTilknytning.type) {
+                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.BYDEL -> GeografiskTilknytningResponse.GeografiskTilknytningType.BYDEL
+                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.KOMMUNE -> GeografiskTilknytningResponse.GeografiskTilknytningType.KOMMUNE
+                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UTLAND -> GeografiskTilknytningResponse.GeografiskTilknytningType.UTLAND
+                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UTLAND_UKJENT -> GeografiskTilknytningResponse.GeografiskTilknytningType.UTLAND_UKJENT
+                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UDEFINERT -> GeografiskTilknytningResponse.GeografiskTilknytningType.UDEFINERT
+                    },
+                    land = geografiskTilknytning.land,
+                    kommune = geografiskTilknytning.kommune,
+                    bydel = geografiskTilknytning.bydel,
+                    kilde = when (geografiskTilknytning.kilde) {
+                        Kilde.CACHE -> KildeResponse.CACHE
+                        Kilde.PDL -> KildeResponse.PDL
+                    }
+                ))
+            }
+        }
+    }
+
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -187,5 +214,17 @@ data class VergemålEllerFremtidsfullmaktResponse(
         MIDLERTIDIG_FOR_MINDREÅRIG,
         FORVALTNING_UTENFOR_VERGEMÅL,
         STADFESTET_FREMTIDSFULLMAKT
+    }
+}
+
+data class GeografiskTilknytningResponse(
+    val type: GeografiskTilknytningType,
+    val land: String?,
+    val kommune: String?,
+    val bydel: String?,
+    val kilde: KildeResponse
+) {
+    enum class GeografiskTilknytningType {
+        BYDEL, KOMMUNE, UTLAND, UTLAND_UKJENT, UDEFINERT
     }
 }

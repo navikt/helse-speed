@@ -1,6 +1,6 @@
 val gradleversjon = "8.10.2"
 val junitJupiterVersion = "5.10.2"
-val tbdLibsVersion = "2024.11.04-14.04-cfd83570"
+val tbdLibsVersion = "2024.11.05-07.46-0d94bc82"
 
 plugins {
     kotlin("jvm") version "1.9.22" apply false

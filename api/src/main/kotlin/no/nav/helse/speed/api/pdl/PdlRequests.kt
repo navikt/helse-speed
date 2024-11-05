@@ -5,6 +5,7 @@ private fun lastSkjema(sti: String) = PdlQueryObject::class.java.getResource(sti
 private val hentIdenterQuery = lastSkjema("/pdl/hentIdenter.graphql")
 private val hentPersonQuery = lastSkjema("/pdl/hentPerson.graphql")
 private val hentVergemål = lastSkjema("/pdl/hentVergemål.graphql")
+private val hentGeografiskTilknytning = lastSkjema("/pdl/hentGeografiskTilknytning.graphql")
 
 data class PdlQueryObject(
     val query: String,
@@ -30,6 +31,13 @@ fun hentPersonQuery(ident: String) =
 fun hentVergemålQuery(ident: String) =
     PdlQueryObject(
         query = hentVergemål,
+        variables = mapOf(
+            "ident" to ident
+        )
+    )
+fun hentGeografiskTilknytningQuery(ident: String) =
+    PdlQueryObject(
+        query = hentGeografiskTilknytning,
         variables = mapOf(
             "ident" to ident
         )
