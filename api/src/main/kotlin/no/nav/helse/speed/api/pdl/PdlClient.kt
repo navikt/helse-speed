@@ -9,7 +9,7 @@ import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.map
 import com.github.navikt.tbd_libs.result_object.ok
-import no.nav.helse.speed.api.pdl.PdlHentGeografiskTilknytningResponse.GeografiskTilknytningType
+import no.nav.helse.speed.api.pdl.PdlHentGeografiskTilknytningResponse.GeografiskTilknytning.GeografiskTilknytningType
 import no.nav.helse.speed.api.pdl.PdlHentPersonResponse.Person
 import no.nav.helse.speed.api.pdl.PdlVergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemåltype
 import java.time.LocalDate
@@ -88,18 +88,19 @@ class PdlClient(
         return request(hentGeografiskTilknytningQuery(ident), callId).map {
             convertResponseBody<PdlHentGeografiskTilknytningResponse>(it)
         }.map {
-            when (it.gtType) {
-                GeografiskTilknytningType.BYDEL -> when (it.gtBydel) {
+            if (it.data.hentGeografiskTilknytning == null) PdlGeografiskTilknytningResultat.PersonFinnesIkke.ok()
+            else when (it.data.hentGeografiskTilknytning.gtType) {
+                GeografiskTilknytningType.BYDEL -> when (it.data.hentGeografiskTilknytning.gtBydel) {
                     null -> "Adressetypen er bydel, men bydel er null".error()
-                    else -> PdlGeografiskTilknytningResultat.Bydel(it.gtBydel).ok()
+                    else -> PdlGeografiskTilknytningResultat.Bydel(it.data.hentGeografiskTilknytning.gtBydel).ok()
                 }
-                GeografiskTilknytningType.KOMMUNE -> when (it.gtKommune) {
+                GeografiskTilknytningType.KOMMUNE -> when (it.data.hentGeografiskTilknytning.gtKommune) {
                     null -> "Adressetypen er kommune, men kommune er null".error()
-                    else -> PdlGeografiskTilknytningResultat.Kommune(it.gtKommune).ok()
+                    else -> PdlGeografiskTilknytningResultat.Kommune(it.data.hentGeografiskTilknytning.gtKommune).ok()
                 }
-                GeografiskTilknytningType.UTLAND -> when (it.gtLand) {
+                GeografiskTilknytningType.UTLAND -> when (it.data.hentGeografiskTilknytning.gtLand) {
                     null -> PdlGeografiskTilknytningResultat.UtlandUkjentLand.ok()
-                    else -> PdlGeografiskTilknytningResultat.Utland(it.gtLand).ok()
+                    else -> PdlGeografiskTilknytningResultat.Utland(it.data.hentGeografiskTilknytning.gtLand).ok()
                 }
                 GeografiskTilknytningType.UDEFINERT -> PdlGeografiskTilknytningResultat.Udefinert.ok()
             }
@@ -253,13 +254,20 @@ data class PdlHentPersonResponse(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class PdlHentGeografiskTilknytningResponse(
-    val gtType: GeografiskTilknytningType,
-    val gtKommune: String?,
-    val gtBydel: String?,
-    val gtLand: String?
+    val data: PdlHentGeografiskTilknytning
 ) {
-    enum class GeografiskTilknytningType {
-        BYDEL, KOMMUNE, UTLAND, @JsonEnumDefaultValue UDEFINERT
+    data class PdlHentGeografiskTilknytning(
+        val hentGeografiskTilknytning: GeografiskTilknytning?
+    )
+    data class GeografiskTilknytning(
+        val gtType: GeografiskTilknytningType,
+        val gtKommune: String?,
+        val gtBydel: String?,
+        val gtLand: String?
+    ) {
+        enum class GeografiskTilknytningType {
+            BYDEL, KOMMUNE, UTLAND, @JsonEnumDefaultValue UDEFINERT
+        }
     }
 }
 
@@ -269,6 +277,7 @@ sealed interface PdlGeografiskTilknytningResultat {
     data class Utland(val land: String) : PdlGeografiskTilknytningResultat
     data class Kommune(val kommune: String) : PdlGeografiskTilknytningResultat
     data class Bydel(val bydel: String) : PdlGeografiskTilknytningResultat
+    data object PersonFinnesIkke : PdlGeografiskTilknytningResultat
 }
 
 sealed interface PdlVergemålEllerFremtidsfullmaktResultat {

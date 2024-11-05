@@ -194,6 +194,7 @@ class Identtjeneste(
 
     private fun mapGeografiskTilknytningFraPDL(svar: PdlGeografiskTilknytningResultat) =
         when (svar) {
+            is PdlGeografiskTilknytningResultat.PersonFinnesIkke -> GeografiskTilknytningResultat.FantIkkePerson
             is PdlGeografiskTilknytningResultat.Bydel -> GeografiskTilknytning(
                 type = BYDEL,
                 land = null,
@@ -245,7 +246,8 @@ class Identtjeneste(
     private fun lagreIdentTilMellomlager(ident: String, resultat: Identer) {
         lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_IDENTOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
     }
-    private fun lagreGeografiskTilknytningTilMellomlager(ident: String, resultat: GeografiskTilknytning) {
+    private fun lagreGeografiskTilknytningTilMellomlager(ident: String, resultat: GeografiskTilknytningResultat) {
+        if (resultat !is GeografiskTilknytningResultat.GeografiskTilknytning) return
         lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_GEOGRAFISK_TILKNYTNINGOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
     }
 
@@ -357,6 +359,7 @@ sealed interface GeografiskTilknytningResultat {
             UDEFINERT // alt er null
         }
     }
+    data object FantIkkePerson : GeografiskTilknytningResultat
 }
 sealed interface VergemålEllerFremtidsfullmaktResultat {
     data class VergemålEllerFremtidsfullmakt(

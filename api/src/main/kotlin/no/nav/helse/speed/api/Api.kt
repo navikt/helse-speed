@@ -137,6 +137,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
         when (val svar = identtjeneste.hentGeografiskTilknytning(request.ident, callId)) {
             is Result.Error -> throw Exception(svar.error, svar.cause)
             is Result.Ok -> when (val geografiskTilknytning = svar.value) {
+                GeografiskTilknytningResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
                 is GeografiskTilknytningResultat.GeografiskTilknytning -> call.respond(HttpStatusCode.OK, GeografiskTilknytningResponse(
                     type = when (geografiskTilknytning.type) {
                         GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.BYDEL -> GeografiskTilknytningResponse.GeografiskTilknytningType.BYDEL
