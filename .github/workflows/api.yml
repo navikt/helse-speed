@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'api/**'
+      - '.github/workflows/api.yml'
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
       - 'api.yml'
