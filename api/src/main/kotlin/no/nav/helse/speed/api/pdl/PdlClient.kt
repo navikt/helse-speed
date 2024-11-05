@@ -2,6 +2,7 @@ package no.nav.helse.speed.api.pdl
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
@@ -9,9 +10,7 @@ import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.map
 import com.github.navikt.tbd_libs.result_object.ok
-import no.nav.helse.speed.api.pdl.PdlHentGeografiskTilknytningResponse.GeografiskTilknytning.GeografiskTilknytningType
-import no.nav.helse.speed.api.pdl.PdlHentPersonResponse.Person
-import no.nav.helse.speed.api.pdl.PdlVergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemåltype
+import no.nav.helse.speed.api.pdl.PdlResultat.*
 import java.time.LocalDate
 import java.net.URI
 import java.net.http.HttpClient
@@ -28,82 +27,89 @@ class PdlClient(
 
     internal fun hentIdenter(ident: String, callId: String) = hentAlleIdenter(ident, false, callId)
     internal fun hentAlleIdenter(ident: String, callId: String) = hentAlleIdenter(ident, true, callId)
-    internal fun hentPerson(ident: String, callId: String): Result<PdlPersonResultat> {
+    internal fun hentPerson(ident: String, callId: String): Result<PdlResultat<PdlPersoninfo>> {
         return request(hentPersonQuery(ident), callId).map {
-            convertResponseBody<PdlHentPersonResponse>(it)
-        }.map {
-            val person = it.data.hentPerson
-            if (person == null) PdlPersonResultat.FantIkkePerson.ok()
-            else PdlPersonResultat.Person(
-                fødselsdato = person.foedselsdato.first().foedselsdato,
-                // foretrekker PDL dersom flere innslag
-                dødsdato = person.doedsfall.firstOrNull { it.metadata.master.lowercase() == "pdl" }?.doedsdato ?: person.doedsfall.firstOrNull()?.doedsdato,
-                fornavn = person.navn.first().fornavn,
-                mellomnavn = person.navn.first().mellomnavn,
-                etternavn = person.navn.first().etternavn,
-                adressebeskyttelse = when (person.adressebeskyttelse.firstOrNull()?.gradering) {
-                    null, PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.UGRADERT -> PdlPersonResultat.Person.Adressebeskyttelse.UGRADERT
-                    PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.FORTROLIG -> PdlPersonResultat.Person.Adressebeskyttelse.FORTROLIG
-                    PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG -> PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG
-                    PdlHentPersonResponse.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG_UTLAND -> PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
-                },
-                kjønn = when (person.kjoenn.first().kjoenn) {
-                    PdlHentPersonResponse.Kjønn.Kjønnverdi.MANN -> PdlPersonResultat.Person.Kjønn.MANN
-                    PdlHentPersonResponse.Kjønn.Kjønnverdi.KVINNE -> PdlPersonResultat.Person.Kjønn.KVINNE
-                    PdlHentPersonResponse.Kjønn.Kjønnverdi.UKJENT -> PdlPersonResultat.Person.Kjønn.UKJENT
-                }
-            ).ok()
+            convertResponseBody<PdlPersonInfoDto>(it)
+        }.map { person ->
+            when (person) {
+                is Ok -> Ok(PdlPersoninfo(
+                    fødselsdato = person.value.foedselsdato.first().foedselsdato,
+                    // foretrekker PDL dersom flere innslag
+                    dødsdato = person.value.doedsfall.firstOrNull { it.metadata.master.lowercase() == "pdl" }?.doedsdato ?: person.value.doedsfall.firstOrNull()?.doedsdato,
+                    fornavn = person.value.navn.first().fornavn,
+                    mellomnavn = person.value.navn.first().mellomnavn,
+                    etternavn = person.value.navn.first().etternavn,
+                    adressebeskyttelse = when (person.value.adressebeskyttelse.firstOrNull()?.gradering) {
+                        null, PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.UGRADERT -> PdlPersoninfo.Adressebeskyttelse.UGRADERT
+                        PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.FORTROLIG -> PdlPersoninfo.Adressebeskyttelse.FORTROLIG
+                        PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG -> PdlPersoninfo.Adressebeskyttelse.STRENGT_FORTROLIG
+                        PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG_UTLAND -> PdlPersoninfo.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
+                    },
+                    kjønn = when (person.value.kjoenn.first().kjoenn) {
+                        PdlPersonInfoDto.Kjønn.Kjønnverdi.MANN -> PdlPersoninfo.Kjønn.MANN
+                        PdlPersonInfoDto.Kjønn.Kjønnverdi.KVINNE -> PdlPersoninfo.Kjønn.KVINNE
+                        PdlPersonInfoDto.Kjønn.Kjønnverdi.UKJENT -> PdlPersoninfo.Kjønn.UKJENT
+                    }
+                ))
+
+                is BadRequest -> person
+                is GenericError -> person
+                is NotFound -> person
+            }.ok()
         }
     }
-    internal fun hentVergemålEllerFremtidsfullmakt(ident: String, callId: String): Result<PdlVergemålEllerFremtidsfullmaktResultat> {
+    internal fun hentVergemålEllerFremtidsfullmakt(ident: String, callId: String): Result<PdlResultat<PdlVergemålEllerFremtidsfullmakt>> {
         return request(hentVergemålQuery(ident), callId).map {
-            convertResponseBody<PdlHentVergemålResponse>(it)
-        }.map {
-            val person = it.data.hentPerson
-            if (person == null) PdlVergemålEllerFremtidsfullmaktResultat.FantIkkePerson.ok()
-            else {
-                val vergemåltyper = person.vergemaalEllerFremtidsfullmakt.map {
-                    PdlVergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemål(
-                        type = when (it.type) {
-                            PdlHentVergemålResponse.Vergemåltype.ensligMindreaarigAsylsoeker -> Vergemåltype.EnsligMindreårigAsylsøker
-                            PdlHentVergemålResponse.Vergemåltype.ensligMindreaarigFlyktning -> Vergemåltype.EnsligMindreårigFlyktning
-                            PdlHentVergemålResponse.Vergemåltype.voksen -> Vergemåltype.Voksen
-                            PdlHentVergemålResponse.Vergemåltype.midlertidigForVoksen -> Vergemåltype.MidlertidigForVoksen
-                            PdlHentVergemålResponse.Vergemåltype.mindreaarig -> Vergemåltype.Mindreårig
-                            PdlHentVergemålResponse.Vergemåltype.midlertidigForMindreaarig -> Vergemåltype.MidlertidigForMindreårig
-                            PdlHentVergemålResponse.Vergemåltype.forvaltningUtenforVergemaal -> Vergemåltype.ForvaltningUtenforVergemål
-                            PdlHentVergemålResponse.Vergemåltype.stadfestetFremtidsfullmakt -> Vergemåltype.StadfestetFremtidsfullmakt
-                        }
+            convertResponseBody<PdlVergemålEllerFremtidsfullmaktDto>(it)
+        }.map { person ->
+            when (person) {
+                is BadRequest -> person
+                is GenericError -> person
+                is NotFound -> person
+                is Ok -> {
+                    val vergemåltyper = person.value.vergemaalEllerFremtidsfullmakt.map {
+                        PdlVergemålEllerFremtidsfullmakt.Vergemål(
+                            type = when (it.type) {
+                                PdlVergemålEllerFremtidsfullmaktDto.Vergemåltype.ensligMindreaarigAsylsoeker -> PdlVergemålEllerFremtidsfullmakt.Vergemåltype.EnsligMindreårigAsylsøker
+                                PdlVergemålEllerFremtidsfullmaktDto.Vergemåltype.ensligMindreaarigFlyktning -> PdlVergemålEllerFremtidsfullmakt.Vergemåltype.EnsligMindreårigFlyktning
+                                PdlVergemålEllerFremtidsfullmaktDto.Vergemåltype.voksen -> PdlVergemålEllerFremtidsfullmakt.Vergemåltype.Voksen
+                                PdlVergemålEllerFremtidsfullmaktDto.Vergemåltype.midlertidigForVoksen -> PdlVergemålEllerFremtidsfullmakt.Vergemåltype.MidlertidigForVoksen
+                                PdlVergemålEllerFremtidsfullmaktDto.Vergemåltype.mindreaarig -> PdlVergemålEllerFremtidsfullmakt.Vergemåltype.Mindreårig
+                                PdlVergemålEllerFremtidsfullmaktDto.Vergemåltype.midlertidigForMindreaarig -> PdlVergemålEllerFremtidsfullmakt.Vergemåltype.MidlertidigForMindreårig
+                                PdlVergemålEllerFremtidsfullmaktDto.Vergemåltype.forvaltningUtenforVergemaal -> PdlVergemålEllerFremtidsfullmakt.Vergemåltype.ForvaltningUtenforVergemål
+                                PdlVergemålEllerFremtidsfullmaktDto.Vergemåltype.stadfestetFremtidsfullmakt -> PdlVergemålEllerFremtidsfullmakt.Vergemåltype.StadfestetFremtidsfullmakt
+                            }
 
-                    )
+                        )
+                    }
+                    Ok(PdlVergemålEllerFremtidsfullmakt(vergemåltyper))
                 }
-                PdlVergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt(
-                    vergemålEllerFremtidsfullmakter = vergemåltyper
-                ).ok()
-            }
+            }.ok()
         }
     }
 
-    fun hentGeografiskTilknytning(ident: String, callId: String): Result<PdlGeografiskTilknytningResultat> {
+    fun hentGeografiskTilknytning(ident: String, callId: String): Result<PdlResultat<PdlGeografiskTilknytning>> {
         return request(hentGeografiskTilknytningQuery(ident), callId).map {
-            convertResponseBody<PdlHentGeografiskTilknytningResponse>(it)
+            convertResponseBody<PdlGeografiskTilknytningDto>(it)
         }.map {
-            if (it.data.hentGeografiskTilknytning == null) PdlGeografiskTilknytningResultat.PersonFinnesIkke.ok()
-            else when (it.data.hentGeografiskTilknytning.gtType) {
-                GeografiskTilknytningType.BYDEL -> when (it.data.hentGeografiskTilknytning.gtBydel) {
-                    null -> "Adressetypen er bydel, men bydel er null".error()
-                    else -> PdlGeografiskTilknytningResultat.Bydel(it.data.hentGeografiskTilknytning.gtBydel).ok()
-                }
-                GeografiskTilknytningType.KOMMUNE -> when (it.data.hentGeografiskTilknytning.gtKommune) {
-                    null -> "Adressetypen er kommune, men kommune er null".error()
-                    else -> PdlGeografiskTilknytningResultat.Kommune(it.data.hentGeografiskTilknytning.gtKommune).ok()
-                }
-                GeografiskTilknytningType.UTLAND -> when (it.data.hentGeografiskTilknytning.gtLand) {
-                    null -> PdlGeografiskTilknytningResultat.UtlandUkjentLand.ok()
-                    else -> PdlGeografiskTilknytningResultat.Utland(it.data.hentGeografiskTilknytning.gtLand).ok()
-                }
-                GeografiskTilknytningType.UDEFINERT -> PdlGeografiskTilknytningResultat.Udefinert.ok()
-            }
+            when (it) {
+                is BadRequest -> it
+                is GenericError -> it
+                is NotFound -> it
+                is Ok -> Ok(
+                    PdlGeografiskTilknytning(
+                        type = when (it.value.gtType) {
+                            PdlGeografiskTilknytningDto.GeografiskTilknytningType.BYDEL -> PdlGeografiskTilknytning.GeografiskTilknytningType.BYDEL
+                            PdlGeografiskTilknytningDto.GeografiskTilknytningType.KOMMUNE -> PdlGeografiskTilknytning.GeografiskTilknytningType.KOMMUNE
+                            PdlGeografiskTilknytningDto.GeografiskTilknytningType.UTLAND -> PdlGeografiskTilknytning.GeografiskTilknytningType.UTLAND
+                            PdlGeografiskTilknytningDto.GeografiskTilknytningType.UDEFINERT -> PdlGeografiskTilknytning.GeografiskTilknytningType.UDEFINERT
+                        },
+                        bydel = it.value.gtBydel,
+                        land = it.value.gtLand,
+                        kommune = it.value.gtKommune
+                    )
+                )
+            }.ok()
         }
     }
 
@@ -131,50 +137,99 @@ class PdlClient(
         }
     }
 
-    private fun hentAlleIdenter(ident: String, historisk: Boolean, callId: String): Result<PdlIdenterResultat> {
+    private fun hentAlleIdenter(ident: String, historisk: Boolean, callId: String): Result<PdlResultat<PdlIdenter>> {
         return request(hentIdenterQuery(ident, historisk), callId)
+            .map { convertResponseBody<PdlIdenterDto>(it) }
             .map {
-                convertResponseBody<PdlHentIdenterResponse>(it)
-            }
-            .map {
-                val identer = it.data.hentIdenter?.identer
-                if (identer == null || identer.isEmpty()) PdlIdenterResultat.FantIkkeIdenter.ok()
-                else {
-                    val (historiske, gjeldende) = identer.partition { it.historisk }
-                    PdlIdenterResultat.Identer(
-                        gjeldende = gjeldende.map(::mapIdent),
-                        historiske = historiske.map(::mapIdent)
-                    ).ok()
-                }
+                when (it) {
+                    is BadRequest -> it
+                    is GenericError -> it
+                    is NotFound -> it
+                    is Ok -> {
+                        val (historiske, gjeldende) = it.value.identer.partition { it.historisk }
+                        Ok(PdlIdenter(
+                            gjeldende = gjeldende.map(::mapIdent),
+                            historiske = historiske.map(::mapIdent)
+                        ))
+                    }
+                }.ok()
             }
     }
 
-    private fun mapIdent(ident: PdlHentIdenterResponse.Ident) =
+    private fun mapIdent(ident: PdlIdenterDto.Ident) =
         when (ident.gruppe) {
-            PdlHentIdenterResponse.Identgruppe.AKTORID -> Ident.AktørId(ident.ident)
-            PdlHentIdenterResponse.Identgruppe.FOLKEREGISTERIDENT -> Ident.Fødselsnummer(ident.ident)
-            PdlHentIdenterResponse.Identgruppe.NPID -> Ident.NPID(ident.ident)
+            PdlIdenterDto.Identgruppe.AKTORID -> Ident.AktørId(ident.ident)
+            PdlIdenterDto.Identgruppe.FOLKEREGISTERIDENT -> Ident.Fødselsnummer(ident.ident)
+            PdlIdenterDto.Identgruppe.NPID -> Ident.NPID(ident.ident)
         }
 
-    private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): Result<T> {
+    private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): Result<PdlResultat<T>> {
         return try {
-            objectMapper.readValue<T>(response.body()).ok()
+            objectMapper
+                .readValue<PdlResponse<T>>(response.body())
+                .result
+                .ok()
         } catch (err: Exception) {
             err.error(err.message ?: "JSON parsing error")
         }
     }
 }
 
+// standard respons fra PDL
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class PdlHentIdenterResponse(
-    val data: PdlHentIdenter
+data class PdlResponse<T>(
+    val errors: List<PdlError>?,
+    private val data: Map<String, T>
 ) {
-    data class PdlHentIdenter(
-        val hentIdenter: Identer?
+    val valueOrNull get() = data.values.singleOrNull()
+
+    val result: PdlResultat<T> get() = when(val verdi = valueOrNull) {
+        null -> when {
+            errors == null || errors.isEmpty() -> GenericError("Ukjent feil: body er null, men errors er også manglende", null)
+            else -> when (val code = errors.first().extensions.code) {
+                PdlExtensions.PdlErrorCode.NOT_FOUND -> NotFound
+                PdlExtensions.PdlErrorCode.BAD_REQUEST -> BadRequest(errors.first().message)
+                PdlExtensions.PdlErrorCode.UNAUTHENTICATED,
+                PdlExtensions.PdlErrorCode.UNKNOWN -> GenericError(errors.first().message, code.name)
+            }
+        }
+        else -> Ok(verdi)
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PdlError(
+        val message: String,
+        val extensions: PdlExtensions
     )
-    data class Identer(
-        val identer: List<Ident>
-    )
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class PdlExtensions(
+        val code: PdlErrorCode
+    ) {
+        enum class PdlErrorCode {
+            @JsonProperty("not_found")
+            NOT_FOUND,
+            @JsonProperty("bad_request")
+            BAD_REQUEST,
+            @JsonProperty("unauthenticated")
+            UNAUTHENTICATED,
+            @JsonEnumDefaultValue
+            UNKNOWN
+        }
+    }
+}
+
+sealed interface PdlResultat<out T> {
+    data object NotFound : PdlResultat<Nothing>
+    data class BadRequest(val error: String) : PdlResultat<Nothing>
+    data class GenericError(val error: String, val code: String?) : PdlResultat<Nothing>
+    data class Ok<T>(val value: T) : PdlResultat<T>
+}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class PdlIdenterDto(
+    val identer: List<Ident>
+) {
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class Ident(
         val ident: String,
         val historisk: Boolean,
@@ -186,15 +241,10 @@ data class PdlHentIdenterResponse(
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class PdlHentVergemålResponse(
-    val data: PdlHentPerson
+data class PdlVergemålEllerFremtidsfullmaktDto(
+    val vergemaalEllerFremtidsfullmakt: List<Vergemål>
 ) {
-    data class PdlHentPerson(
-        val hentPerson: Person?
-    )
-    data class Person(
-        val vergemaalEllerFremtidsfullmakt: List<Vergemål>
-    )
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class Vergemål(
         val type: Vergemåltype
     )
@@ -209,28 +259,26 @@ data class PdlHentVergemålResponse(
         stadfestetFremtidsfullmakt
     }
 }
+
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class PdlHentPersonResponse(
-    val data: PdlHentPerson
+data class PdlPersonInfoDto(
+    val foedselsdato: List<Fødselsdato>,
+    val navn: List<Navn>,
+    val adressebeskyttelse: List<Adressebeskyttelse>,
+    val kjoenn: List<Kjønn>,
+    val doedsfall: List<Dødsfall>
 ) {
-    data class PdlHentPerson(
-        val hentPerson: Person?
-    )
-    data class Person(
-        val foedselsdato: List<Fødselsdato>,
-        val navn: List<Navn>,
-        val adressebeskyttelse: List<Adressebeskyttelse>,
-        val kjoenn: List<Kjønn>,
-        val doedsfall: List<Dødsfall>
-    )
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class Fødselsdato(
         val foedselsdato: LocalDate
     )
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class Navn(
         val fornavn: String,
         val mellomnavn: String?,
         val etternavn: String
     )
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class Adressebeskyttelse(
         val gradering: Adressebeskyttelsegradering?
     ) {
@@ -238,6 +286,7 @@ data class PdlHentPersonResponse(
             FORTROLIG, STRENGT_FORTROLIG, STRENGT_FORTROLIG_UTLAND, @JsonEnumDefaultValue UGRADERT
         }
     }
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class Kjønn(
         val kjoenn: Kjønnverdi
     ) {
@@ -245,91 +294,83 @@ data class PdlHentPersonResponse(
             MANN, KVINNE, @JsonEnumDefaultValue UKJENT
         }
     }
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class Dødsfall(
         val doedsdato: LocalDate,
         val metadata: Metadata
     )
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class Metadata(val master: String)
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class PdlHentGeografiskTilknytningResponse(
-    val data: PdlHentGeografiskTilknytning
+data class PdlGeografiskTilknytningDto(
+    val gtType: GeografiskTilknytningType,
+    val gtKommune: String?,
+    val gtBydel: String?,
+    val gtLand: String?
 ) {
-    data class PdlHentGeografiskTilknytning(
-        val hentGeografiskTilknytning: GeografiskTilknytning?
+    enum class GeografiskTilknytningType {
+        BYDEL, KOMMUNE, UTLAND, @JsonEnumDefaultValue UDEFINERT
+    }
+}
+
+data class PdlGeografiskTilknytning(
+    val type: GeografiskTilknytningType,
+    val land: String?,
+    val kommune: String?,
+    val bydel: String?
+) {
+    enum class GeografiskTilknytningType {
+        BYDEL, // bydel er ikke null
+        KOMMUNE, // kommune er ikke null
+        UTLAND,  // land kan være null
+        UDEFINERT // alt er null
+    }
+}
+
+data class PdlVergemålEllerFremtidsfullmakt(
+    val vergemålEllerFremtidsfullmakter: List<Vergemål>
+) {
+    data class Vergemål(
+        val type: Vergemåltype
     )
-    data class GeografiskTilknytning(
-        val gtType: GeografiskTilknytningType,
-        val gtKommune: String?,
-        val gtBydel: String?,
-        val gtLand: String?
-    ) {
-        enum class GeografiskTilknytningType {
-            BYDEL, KOMMUNE, UTLAND, @JsonEnumDefaultValue UDEFINERT
-        }
+    enum class Vergemåltype {
+        EnsligMindreårigAsylsøker,
+        EnsligMindreårigFlyktning,
+        Voksen,
+        MidlertidigForVoksen,
+        Mindreårig,
+        MidlertidigForMindreårig,
+        ForvaltningUtenforVergemål,
+        StadfestetFremtidsfullmakt
     }
 }
 
-sealed interface PdlGeografiskTilknytningResultat {
-    data object Udefinert : PdlGeografiskTilknytningResultat
-    data object UtlandUkjentLand : PdlGeografiskTilknytningResultat
-    data class Utland(val land: String) : PdlGeografiskTilknytningResultat
-    data class Kommune(val kommune: String) : PdlGeografiskTilknytningResultat
-    data class Bydel(val bydel: String) : PdlGeografiskTilknytningResultat
-    data object PersonFinnesIkke : PdlGeografiskTilknytningResultat
+data class PdlPersoninfo(
+    val fødselsdato: LocalDate,
+    val dødsdato: LocalDate?,
+    val fornavn: String,
+    val mellomnavn: String?,
+    val etternavn: String,
+    val adressebeskyttelse: Adressebeskyttelse,
+    val kjønn: Kjønn
+) {
+    enum class Adressebeskyttelse {
+        FORTROLIG, STRENGT_FORTROLIG, STRENGT_FORTROLIG_UTLAND, UGRADERT
+    }
+    enum class Kjønn {
+        MANN, KVINNE, UKJENT
+    }
 }
 
-sealed interface PdlVergemålEllerFremtidsfullmaktResultat {
-    data class VergemålEllerFremtidsfullmakt(
-        val vergemålEllerFremtidsfullmakter: List<Vergemål>
-    ) : PdlVergemålEllerFremtidsfullmaktResultat {
-        data class Vergemål(
-            val type: Vergemåltype
-        )
-        enum class Vergemåltype {
-            EnsligMindreårigAsylsøker,
-            EnsligMindreårigFlyktning,
-            Voksen,
-            MidlertidigForVoksen,
-            Mindreårig,
-            MidlertidigForMindreårig,
-            ForvaltningUtenforVergemål,
-            StadfestetFremtidsfullmakt
-        }
-    }
-    data object FantIkkePerson : PdlVergemålEllerFremtidsfullmaktResultat
-}
-sealed interface PdlPersonResultat {
-    data class Person(
-        val fødselsdato: LocalDate,
-        val dødsdato: LocalDate?,
-        val fornavn: String,
-        val mellomnavn: String?,
-        val etternavn: String,
-        val adressebeskyttelse: Adressebeskyttelse,
-        val kjønn: Kjønn
-    ): PdlPersonResultat {
-        enum class Adressebeskyttelse {
-            FORTROLIG, STRENGT_FORTROLIG, STRENGT_FORTROLIG_UTLAND, UGRADERT
-        }
-        enum class Kjønn {
-            MANN, KVINNE, UKJENT
-        }
-    }
-    data object FantIkkePerson: PdlPersonResultat
-}
-sealed interface PdlIdenterResultat {
-    data class Identer(
-        val gjeldende: List<Ident>,
-        val historiske: List<Ident>
-    ): PdlIdenterResultat {
-        val fødselsnummer = gjeldende.first { it is Ident.Fødselsnummer }.ident
-        val aktørId = gjeldende.first { it is Ident.AktørId }.ident
-        val npid = gjeldende.firstOrNull { it is Ident.NPID }?.ident
-    }
-
-    data object FantIkkeIdenter: PdlIdenterResultat
+data class PdlIdenter(
+    val gjeldende: List<Ident>,
+    val historiske: List<Ident>
+) {
+    val fødselsnummer = gjeldende.first { it is Ident.Fødselsnummer }.ident
+    val aktørId = gjeldende.first { it is Ident.AktørId }.ident
+    val npid = gjeldende.firstOrNull { it is Ident.NPID }?.ident
 }
 
 sealed class Ident(val ident: String) {

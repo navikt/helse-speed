@@ -3,6 +3,7 @@ package no.nav.helse.speed.api
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.map
 import com.github.navikt.tbd_libs.result_object.ok
 import io.micrometer.core.instrument.Counter
@@ -12,14 +13,16 @@ import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytnin
 import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.*
 import no.nav.helse.speed.api.IdenterResultat.FantIkkeIdenter
 import no.nav.helse.speed.api.IdenterResultat.Identer
+import no.nav.helse.speed.api.PersonResultat.*
+import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.*
+import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.*
 import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemåltype
 import no.nav.helse.speed.api.pdl.Ident
 import no.nav.helse.speed.api.pdl.PdlClient
-import no.nav.helse.speed.api.pdl.PdlGeografiskTilknytningResultat
-import no.nav.helse.speed.api.pdl.PdlIdenterResultat
-import no.nav.helse.speed.api.pdl.PdlPersonResultat
-import no.nav.helse.speed.api.pdl.PdlVergemålEllerFremtidsfullmaktResultat
-import no.nav.helse.speed.api.pdl.PdlVergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt
+import no.nav.helse.speed.api.pdl.PdlGeografiskTilknytning
+import no.nav.helse.speed.api.pdl.PdlPersoninfo
+import no.nav.helse.speed.api.pdl.PdlResultat
+import no.nav.helse.speed.api.pdl.PdlVergemålEllerFremtidsfullmakt
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.params.SetParams
@@ -71,8 +74,8 @@ class Identtjeneste(
         }
     }
 
-    private fun hentPersonFraMellomlager(ident: String): Result.Ok<PersonResultat.Person>? {
-        return hentFraMellomlager<PersonResultat.Person>(mellomlagringsnøkkel(CACHE_PREFIX_PERSONINFOOPPSLAG, ident))
+    private fun hentPersonFraMellomlager(ident: String): Result.Ok<Person>? {
+        return hentFraMellomlager<Person>(mellomlagringsnøkkel(CACHE_PREFIX_PERSONINFOOPPSLAG, ident))
     }
     private fun hentIdentFraMellomlager(ident: String): Result.Ok<Identer>? {
         return hentFraMellomlager<Identer>(mellomlagringsnøkkel(CACHE_PREFIX_IDENTOPPSLAG, ident))
@@ -103,13 +106,15 @@ class Identtjeneste(
     private fun hentHistoriskeIdenterFraPDL(ident: String, callId: String): Result<HistoriskeIdenterResultat> {
         return pdlClient.hentAlleIdenter(ident, callId).map { identer ->
             when (identer) {
-                PdlIdenterResultat.FantIkkeIdenter -> HistoriskeIdenterResultat.FantIkkeIdenter.ok()
-                is PdlIdenterResultat.Identer -> HistoriskeIdenterResultat.Identer(
-                    fødselsnumre = identer.historiske.filterIsInstance<Ident.Fødselsnummer>().map { it.ident },
+                is PdlResultat.BadRequest -> identer.error.error()
+                is PdlResultat.GenericError -> "${identer.error} (${identer.code})".error()
+                PdlResultat.NotFound -> HistoriskeIdenterResultat.FantIkkeIdenter.ok()
+                is PdlResultat.Ok -> HistoriskeIdenterResultat.Identer(
+                    fødselsnumre = identer.value.historiske.filterIsInstance<Ident.Fødselsnummer>().map { it.ident },
                     kilde = Kilde.PDL
-                ).also {
-                    lagreHistoriskeIdenterTilMellomlager(ident, it)
-                }.ok()
+                )
+                    .also { lagreHistoriskeIdenterTilMellomlager(ident, it) }
+                    .ok()
             }
         }
     }
@@ -117,23 +122,25 @@ class Identtjeneste(
     private fun hentPersonFraPDL(ident: String, callId: String): Result<PersonResultat> {
         return pdlClient.hentPerson(ident, callId).map { person ->
             when (person) {
-                PdlPersonResultat.FantIkkePerson -> PersonResultat.FantIkkePerson.ok()
-                is PdlPersonResultat.Person -> PersonResultat.Person(
-                    fødselsdato = person.fødselsdato,
-                    dødsdato = person.dødsdato,
-                    fornavn = person.fornavn,
-                    mellomnavn = person.mellomnavn,
-                    etternavn = person.etternavn,
-                    adressebeskyttelse = when (person.adressebeskyttelse) {
-                        PdlPersonResultat.Person.Adressebeskyttelse.FORTROLIG -> PersonResultat.Person.Adressebeskyttelse.FORTROLIG
-                        PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG -> PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG
-                        PdlPersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND -> PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
-                        PdlPersonResultat.Person.Adressebeskyttelse.UGRADERT -> PersonResultat.Person.Adressebeskyttelse.UGRADERT
+                is PdlResultat.BadRequest -> person.error.error()
+                is PdlResultat.GenericError -> "${person.error} (${person.code})".error()
+                PdlResultat.NotFound -> PersonResultat.FantIkkePerson.ok()
+                is PdlResultat.Ok -> Person(
+                    fødselsdato = person.value.fødselsdato,
+                    dødsdato = person.value.dødsdato,
+                    fornavn = person.value.fornavn,
+                    mellomnavn = person.value.mellomnavn,
+                    etternavn = person.value.etternavn,
+                    adressebeskyttelse = when (person.value.adressebeskyttelse) {
+                        PdlPersoninfo.Adressebeskyttelse.FORTROLIG -> Person.Adressebeskyttelse.FORTROLIG
+                        PdlPersoninfo.Adressebeskyttelse.STRENGT_FORTROLIG -> Person.Adressebeskyttelse.STRENGT_FORTROLIG
+                        PdlPersoninfo.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND -> Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
+                        PdlPersoninfo.Adressebeskyttelse.UGRADERT -> Person.Adressebeskyttelse.UGRADERT
                     },
-                    kjønn = when (person.kjønn) {
-                        PdlPersonResultat.Person.Kjønn.MANN -> PersonResultat.Person.Kjønn.MANN
-                        PdlPersonResultat.Person.Kjønn.KVINNE -> PersonResultat.Person.Kjønn.KVINNE
-                        PdlPersonResultat.Person.Kjønn.UKJENT -> PersonResultat.Person.Kjønn.UKJENT
+                    kjønn = when (person.value.kjønn) {
+                        PdlPersoninfo.Kjønn.MANN -> Person.Kjønn.MANN
+                        PdlPersoninfo.Kjønn.KVINNE -> Person.Kjønn.KVINNE
+                        PdlPersoninfo.Kjønn.UKJENT -> Person.Kjønn.UKJENT
                     },
                     kilde = Kilde.PDL
                 )
@@ -146,19 +153,21 @@ class Identtjeneste(
     private fun hentVergemålEllerFremtidsfullmaktFraPDL(ident: String, callId: String): Result<VergemålEllerFremtidsfullmaktResultat> {
         return pdlClient.hentVergemålEllerFremtidsfullmakt(ident, callId).map { person ->
             when (person) {
-                PdlVergemålEllerFremtidsfullmaktResultat.FantIkkePerson -> VergemålEllerFremtidsfullmaktResultat.FantIkkePerson.ok()
-                is VergemålEllerFremtidsfullmakt -> VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt(
-                    vergemålEllerFremtidsfullmakter = person.vergemålEllerFremtidsfullmakter.map {
-                        VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemål(
+                is PdlResultat.BadRequest -> person.error.error()
+                is PdlResultat.GenericError -> "${person.error} (${person.code})".error()
+                PdlResultat.NotFound -> VergemålEllerFremtidsfullmaktResultat.FantIkkePerson.ok()
+                is PdlResultat.Ok -> VergemålEllerFremtidsfullmakt(
+                    vergemålEllerFremtidsfullmakter = person.value.vergemålEllerFremtidsfullmakter.map {
+                        Vergemål(
                             type = when (it.type) {
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.EnsligMindreårigAsylsøker -> Vergemåltype.ENSLIG_MINDREÅRIG_ASYLSØKER
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.EnsligMindreårigFlyktning -> Vergemåltype.ENSLIG_MINDREÅRIG_FLYKTNING
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.Voksen -> Vergemåltype.VOKSEN
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.MidlertidigForVoksen -> Vergemåltype.MIDLERTIDIG_FOR_VOKSEN
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.Mindreårig -> Vergemåltype.MINDREÅRIG
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.MidlertidigForMindreårig -> Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.ForvaltningUtenforVergemål -> Vergemåltype.FORVALTNING_UTENFOR_VERGEMÅL
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.StadfestetFremtidsfullmakt -> Vergemåltype.STADFESTET_FREMTIDSFULLMAKT
+                                PdlVergemålEllerFremtidsfullmakt.Vergemåltype.EnsligMindreårigAsylsøker -> Vergemåltype.ENSLIG_MINDREÅRIG_ASYLSØKER
+                                PdlVergemålEllerFremtidsfullmakt.Vergemåltype.EnsligMindreårigFlyktning -> Vergemåltype.ENSLIG_MINDREÅRIG_FLYKTNING
+                                PdlVergemålEllerFremtidsfullmakt.Vergemåltype.Voksen -> Vergemåltype.VOKSEN
+                                PdlVergemålEllerFremtidsfullmakt.Vergemåltype.MidlertidigForVoksen -> Vergemåltype.MIDLERTIDIG_FOR_VOKSEN
+                                PdlVergemålEllerFremtidsfullmakt.Vergemåltype.Mindreårig -> Vergemåltype.MINDREÅRIG
+                                PdlVergemålEllerFremtidsfullmakt.Vergemåltype.MidlertidigForMindreårig -> Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG
+                                PdlVergemålEllerFremtidsfullmakt.Vergemåltype.ForvaltningUtenforVergemål -> Vergemåltype.FORVALTNING_UTENFOR_VERGEMÅL
+                                PdlVergemålEllerFremtidsfullmakt.Vergemåltype.StadfestetFremtidsfullmakt -> Vergemåltype.STADFESTET_FREMTIDSFULLMAKT
                             }
                         )
                     },
@@ -173,66 +182,46 @@ class Identtjeneste(
     private fun hentFraPDL(ident: String, callId: String): Result<IdenterResultat> {
         return pdlClient.hentIdenter(ident, callId).map { identer ->
             when (identer) {
-                is PdlIdenterResultat.Identer -> Identer(
-                    fødselsnummer = identer.fødselsnummer,
-                    aktørId = identer.aktørId,
-                    npid = identer.npid,
+                is PdlResultat.BadRequest -> identer.error.error()
+                is PdlResultat.GenericError -> "${identer.error} (${identer.code})".error()
+                PdlResultat.NotFound -> FantIkkeIdenter.ok()
+                is PdlResultat.Ok -> Identer(
+                    fødselsnummer = identer.value.fødselsnummer,
+                    aktørId = identer.value.aktørId,
+                    npid = identer.value.npid,
                     kilde = Kilde.PDL
-                ).also { lagreIdentTilMellomlager(ident, it) }.ok()
-                is PdlIdenterResultat.FantIkkeIdenter -> FantIkkeIdenter.ok()
+                )
+                    .also { lagreIdentTilMellomlager(ident, it) }
+                    .ok()
             }
         }
     }
 
     private fun hentGeografiskTilknytningFraPDL(ident: String, callId: String): Result<GeografiskTilknytningResultat> {
         return pdlClient.hentGeografiskTilknytning(ident, callId).map {
-            mapGeografiskTilknytningFraPDL(it)
-                .also { lagreGeografiskTilknytningTilMellomlager(ident, it) }
-                .ok()
+            when (it) {
+                is PdlResultat.BadRequest -> it.error.error()
+                is PdlResultat.GenericError -> "${it.error} (${it.code})".error()
+                PdlResultat.NotFound -> GeografiskTilknytningResultat.FantIkkePerson.ok()
+                is PdlResultat.Ok -> GeografiskTilknytning(
+                    type = when (it.value.type) {
+                        PdlGeografiskTilknytning.GeografiskTilknytningType.BYDEL -> BYDEL
+                        PdlGeografiskTilknytning.GeografiskTilknytningType.KOMMUNE -> KOMMUNE
+                        PdlGeografiskTilknytning.GeografiskTilknytningType.UTLAND -> if (it.value.land == null) UTLAND_UKJENT else UTLAND
+                        PdlGeografiskTilknytning.GeografiskTilknytningType.UDEFINERT -> UDEFINERT
+                    },
+                    land = it.value.land,
+                    kommune = it.value.kommune,
+                    bydel = it.value.bydel,
+                    kilde = Kilde.PDL
+                )
+                    .also { lagreGeografiskTilknytningTilMellomlager(ident, it) }
+                    .ok()
+            }
         }
     }
 
-    private fun mapGeografiskTilknytningFraPDL(svar: PdlGeografiskTilknytningResultat) =
-        when (svar) {
-            is PdlGeografiskTilknytningResultat.PersonFinnesIkke -> GeografiskTilknytningResultat.FantIkkePerson
-            is PdlGeografiskTilknytningResultat.Bydel -> GeografiskTilknytning(
-                type = BYDEL,
-                land = null,
-                kommune = null,
-                bydel = svar.bydel,
-                kilde = Kilde.PDL
-            )
-            is PdlGeografiskTilknytningResultat.Kommune -> GeografiskTilknytning(
-                type = KOMMUNE,
-                land = null,
-                kommune = svar.kommune,
-                bydel = null,
-                kilde = Kilde.PDL
-            )
-            PdlGeografiskTilknytningResultat.Udefinert -> GeografiskTilknytning(
-                type = UDEFINERT,
-                land = null,
-                kommune = null,
-                bydel = null,
-                kilde = Kilde.PDL
-            )
-            is PdlGeografiskTilknytningResultat.Utland -> GeografiskTilknytning(
-                type = UTLAND,
-                land = svar.land,
-                kommune = null,
-                bydel = null,
-                kilde = Kilde.PDL
-            )
-            PdlGeografiskTilknytningResultat.UtlandUkjentLand -> GeografiskTilknytning(
-                type = UTLAND_UKJENT,
-                land = null,
-                kommune = null,
-                bydel = null,
-                kilde = Kilde.PDL
-            )
-        }
-
-    private fun lagrePersonTilMellomlager(ident: String, resultat: PersonResultat.Person) {
+    private fun lagrePersonTilMellomlager(ident: String, resultat: Person) {
         lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_PERSONINFOOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
     }
     private fun lagreVergemålTilMellomlager(ident: String, resultat: VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt) {
@@ -246,8 +235,7 @@ class Identtjeneste(
     private fun lagreIdentTilMellomlager(ident: String, resultat: Identer) {
         lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_IDENTOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
     }
-    private fun lagreGeografiskTilknytningTilMellomlager(ident: String, resultat: GeografiskTilknytningResultat) {
-        if (resultat !is GeografiskTilknytningResultat.GeografiskTilknytning) return
+    private fun lagreGeografiskTilknytningTilMellomlager(ident: String, resultat: GeografiskTilknytningResultat.GeografiskTilknytning) {
         lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_GEOGRAFISK_TILKNYTNINGOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
     }
 
