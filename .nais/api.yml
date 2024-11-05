@@ -38,6 +38,7 @@ spec:
         - application: speed-async
         - application: spennende
         - application: spedisjon
+        - application: sparkel-norg
         - application: sparkel-personinfo
     outbound:
       external:
