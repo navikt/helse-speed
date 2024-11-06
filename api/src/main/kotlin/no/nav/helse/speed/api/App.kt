@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
 import com.github.navikt.tbd_libs.naisful.naisApp
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationCallPipeline
 import io.ktor.server.application.call
 import io.ktor.server.auth.*
@@ -64,14 +65,12 @@ fun launchApp(env: Map<String, String>) {
         meterRegistry = meterRegistry,
         objectMapper = objectmapper,
         applicationLogger = logg,
-        callLogger = LoggerFactory.getLogger("no.nav.helse.speed.api.CallLogging")
+        callLogger = LoggerFactory.getLogger("no.nav.helse.speed.api.CallLogging"),
+        mdcEntries = mapOf(
+            "azp_name" to { call: ApplicationCall -> call.principal<JWTPrincipal>()?.get("azp_name") }
+        )
     ) {
         authentication { azureApp.konfigurerJwtAuth(this) }
-        intercept(ApplicationCallPipeline.Monitoring) {
-            MDC.putCloseable("azp_name", call.principal<JWTPrincipal>()?.get("azp_name")).use {
-                proceed()
-            }
-        }
         routing {
             authenticate {
                 api(identtjeneste)
