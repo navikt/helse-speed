@@ -43,6 +43,7 @@ spec:
         - application: sparkel-personinfo
         - application: spre-gosys
         - application: spre-styringsinfo
+        - application: vedtaksfeed
     outbound:
       external:
         - host: {{pdlHostname}}
