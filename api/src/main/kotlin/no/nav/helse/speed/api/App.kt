@@ -66,6 +66,7 @@ fun launchApp(env: Map<String, String>) {
         objectMapper = objectmapper,
         applicationLogger = logg,
         callLogger = LoggerFactory.getLogger("no.nav.helse.speed.api.CallLogging"),
+        timersConfig = { call, _ -> tag("azp_name", call.principal<JWTPrincipal>()?.get("azp_name") ?: "n/a") },
         mdcEntries = mapOf(
             "azp_name" to { call: ApplicationCall -> call.principal<JWTPrincipal>()?.get("azp_name") }
         )
