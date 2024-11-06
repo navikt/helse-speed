@@ -41,6 +41,7 @@ spec:
         - application: sparkel-gosys
         - application: sparkel-norg
         - application: sparkel-personinfo
+        - application: sporbar
         - application: spre-gosys
         - application: spre-styringsinfo
         - application: vedtaksfeed
