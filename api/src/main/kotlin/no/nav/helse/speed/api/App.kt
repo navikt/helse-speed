@@ -6,7 +6,10 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
 import com.github.navikt.tbd_libs.naisful.naisApp
+import io.ktor.server.application.ApplicationCallPipeline
+import io.ktor.server.application.call
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.routing.*
 import io.micrometer.core.instrument.Clock
 import io.micrometer.prometheusmetrics.PrometheusConfig
@@ -14,6 +17,7 @@ import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.helse.speed.api.pdl.PdlClient
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import redis.clients.jedis.DefaultJedisClientConfig
 import redis.clients.jedis.HostAndPort
 import redis.clients.jedis.JedisPool
@@ -63,6 +67,11 @@ fun launchApp(env: Map<String, String>) {
         callLogger = LoggerFactory.getLogger("no.nav.helse.speed.api.CallLogging")
     ) {
         authentication { azureApp.konfigurerJwtAuth(this) }
+        intercept(ApplicationCallPipeline.Monitoring) {
+            MDC.putCloseable("azp_name", call.principal<JWTPrincipal>()?.get("azp_name")).use {
+                proceed()
+            }
+        }
         routing {
             authenticate {
                 api(identtjeneste)
