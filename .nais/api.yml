@@ -36,6 +36,7 @@ spec:
     inbound:
       rules:
         - application: spaghet
+        - application: spanner
         - application: speed-async
         - application: spennende
         - application: spedisjon
