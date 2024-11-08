@@ -2,5 +2,17 @@
   "ingresses": ["https://speed.ansatt.nav.no","https://speed.intern.nav.no"],
   "pdlHostname": "pdl-api.prod-fss-pub.nais.io",
   "pdlScope": "api://prod-fss.pdl.pdl-api/.default",
-  "tenant": "nav.no"
+  "tenant": "nav.no",
+  "accessPolicy": {
+    "inbound": {
+      "rules": [
+        {
+          "application": "spanner"
+        },
+        {
+          "application": "spleis-api"
+        }
+      ]
+    }
+  }
 }
