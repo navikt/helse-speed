@@ -2,5 +2,14 @@
   "ingresses": ["https://speed.ansatt.dev.nav.no","https://speed.intern.dev.nav.no"],
   "pdlHostname": "pdl-api.dev-fss-pub.nais.io",
   "pdlScope": "api://dev-fss.pdl.pdl-api/.default",
-  "tenant": "trygdeetaten.no"
+  "tenant": "trygdeetaten.no",
+  "accessPolicy": {
+    "inbound": {
+      "rules": [
+        {
+          "application": "spleis-testdata"
+        }
+      ]
+    }
+  }
 }

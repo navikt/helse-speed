@@ -47,6 +47,9 @@ spec:
         - application: spre-gosys
         - application: spre-styringsinfo
         - application: vedtaksfeed
+        {{ #each accessPolicy.inbound.rules }}
+        - application: "{{application}}"
+        {{/each } }
     outbound:
       external:
         - host: {{pdlHostname}}
