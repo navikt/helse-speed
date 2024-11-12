@@ -32,26 +32,31 @@ class PdlClient(
             convertResponseBody<PdlPersonInfoDto>(it)
         }.map { person ->
             when (person) {
-                is Ok -> Ok(PdlPersoninfo(
-                    fødselsdato = person.value.foedselsdato.first().foedselsdato,
-                    // foretrekker PDL dersom flere innslag
-                    dødsdato = person.value.doedsfall.firstOrNull { it.metadata.master.lowercase() == "pdl" }?.doedsdato ?: person.value.doedsfall.firstOrNull()?.doedsdato,
-                    fornavn = person.value.navn.first().fornavn,
-                    mellomnavn = person.value.navn.first().mellomnavn,
-                    etternavn = person.value.navn.first().etternavn,
-                    adressebeskyttelse = when (person.value.adressebeskyttelse.firstOrNull()?.gradering) {
-                        null, PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.UGRADERT -> PdlPersoninfo.Adressebeskyttelse.UGRADERT
-                        PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.FORTROLIG -> PdlPersoninfo.Adressebeskyttelse.FORTROLIG
-                        PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG -> PdlPersoninfo.Adressebeskyttelse.STRENGT_FORTROLIG
-                        PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG_UTLAND -> PdlPersoninfo.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
-                    },
-                    kjønn = when (person.value.kjoenn.first().kjoenn) {
-                        PdlPersonInfoDto.Kjønn.Kjønnverdi.MANN -> PdlPersoninfo.Kjønn.MANN
-                        PdlPersonInfoDto.Kjønn.Kjønnverdi.KVINNE -> PdlPersoninfo.Kjønn.KVINNE
-                        PdlPersonInfoDto.Kjønn.Kjønnverdi.UKJENT -> PdlPersoninfo.Kjønn.UKJENT
-                    }
-                ))
-
+                is Ok -> when (person.value.navn.isEmpty()) {
+                    true -> NotFound
+                    false -> Ok(
+                        PdlPersoninfo(
+                            fødselsdato = person.value.foedselsdato.first().foedselsdato,
+                            // foretrekker PDL dersom flere innslag
+                            dødsdato = person.value.doedsfall.firstOrNull { it.metadata.master.lowercase() == "pdl" }?.doedsdato
+                                ?: person.value.doedsfall.firstOrNull()?.doedsdato,
+                            fornavn = person.value.navn.first().fornavn,
+                            mellomnavn = person.value.navn.first().mellomnavn?.takeIf(String::isNotBlank),
+                            etternavn = person.value.navn.first().etternavn,
+                            adressebeskyttelse = when (person.value.adressebeskyttelse.firstOrNull()?.gradering) {
+                                null, PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.UGRADERT -> PdlPersoninfo.Adressebeskyttelse.UGRADERT
+                                PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.FORTROLIG -> PdlPersoninfo.Adressebeskyttelse.FORTROLIG
+                                PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG -> PdlPersoninfo.Adressebeskyttelse.STRENGT_FORTROLIG
+                                PdlPersonInfoDto.Adressebeskyttelse.Adressebeskyttelsegradering.STRENGT_FORTROLIG_UTLAND -> PdlPersoninfo.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
+                            },
+                            kjønn = when (person.value.kjoenn.firstOrNull()?.kjoenn) {
+                                PdlPersonInfoDto.Kjønn.Kjønnverdi.MANN -> PdlPersoninfo.Kjønn.MANN
+                                PdlPersonInfoDto.Kjønn.Kjønnverdi.KVINNE -> PdlPersoninfo.Kjønn.KVINNE
+                                null, PdlPersonInfoDto.Kjønn.Kjønnverdi.UKJENT -> PdlPersoninfo.Kjønn.UKJENT
+                            }
+                        )
+                    )
+                }
                 is BadRequest -> person
                 is GenericError -> person
                 is NotFound -> person
