@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 val junitJupiterVersion = "5.11.3"
-val tbdLibsVersion = "2024.11.06-12.37-f870e704"
+val tbdLibsVersion = "2024.11.12-11.09-16cf2599"
 
 plugins {
     kotlin("jvm") version "2.0.21" apply false
