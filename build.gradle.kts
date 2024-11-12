@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
+
 val junitJupiterVersion = "5.10.2"
 val tbdLibsVersion = "2024.11.06-12.37-f870e704"
 
@@ -36,9 +38,9 @@ subprojects {
         testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     }
 
-    configure<JavaPluginExtension> {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
+    configure<KotlinJvmProjectExtension> {
+        jvmToolchain {
+            languageVersion.set(JavaLanguageVersion.of("21"))
         }
     }
 
