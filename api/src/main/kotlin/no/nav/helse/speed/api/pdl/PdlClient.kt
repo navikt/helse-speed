@@ -11,6 +11,7 @@ import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.map
 import com.github.navikt.tbd_libs.result_object.ok
 import no.nav.helse.speed.api.pdl.PdlResultat.*
+import org.slf4j.LoggerFactory
 import java.time.LocalDate
 import java.net.URI
 import java.net.http.HttpClient
@@ -24,7 +25,9 @@ class PdlClient(
     private val objectMapper: ObjectMapper,
     private val httpClient: HttpClient = HttpClient.newHttpClient()
 ) {
-
+    private companion object {
+        private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
+    }
     internal fun hentIdenter(ident: String, callId: String) = hentAlleIdenter(ident, false, callId)
     internal fun hentAlleIdenter(ident: String, callId: String) = hentAlleIdenter(ident, true, callId)
     internal fun hentPerson(ident: String, callId: String): Result<PdlResultat<PdlPersoninfo>> {
@@ -170,8 +173,10 @@ class PdlClient(
 
     private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): Result<PdlResultat<T>> {
         return try {
+            val content = response.body()
+            sikkerlogg.info("svar fra pdl: http ${response.statusCode()}:\n$content")
             objectMapper
-                .readValue<PdlResponse<T>>(response.body())
+                .readValue<PdlResponse<T>>(content)
                 .result
                 .ok()
         } catch (err: Exception) {
