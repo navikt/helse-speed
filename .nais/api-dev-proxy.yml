@@ -1,0 +1,44 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: speed-api-dev-proxy
+  namespace: tbd
+  labels:
+    team: tbd
+spec:
+  image: {{image}}
+  strategy:
+    type: RollingUpdate
+  replicas:
+    min: 2
+    max: 2
+  liveness:
+    path: /isalive
+  readiness:
+    path: /isready
+  preStopHook:
+    http:
+      path: /stop
+  resources:
+    limits:
+      memory: 1024Mi
+  prometheus:
+    path: /metrics
+    enabled: true
+  secureLogs:
+    enabled: true
+  observability:
+    autoInstrumentation:
+      enabled: true
+      runtime: java
+  azure:
+    application:
+      enabled: true
+      tenant: trygdeetaten.no
+  accessPolicy:
+    inbound:
+      rules:
+        - application: spleis-api
+    outbound:
+      rules:
+        - speed-api
