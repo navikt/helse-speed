@@ -7,7 +7,9 @@
     "inbound": {
       "rules": [
         {
-          "application": "speed-api-dev-proxy",
+          "application": "speed-api-dev-proxy"
+        },
+        {
           "application": "spleis-testdata"
         }
       ]
