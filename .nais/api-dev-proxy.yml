@@ -38,6 +38,7 @@ spec:
   accessPolicy:
     inbound:
       rules:
+        - application: spanner
         - application: spleis-api
     outbound:
       rules:
