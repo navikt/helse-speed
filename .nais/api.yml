@@ -16,6 +16,9 @@ spec:
     path: /isalive
   readiness:
     path: /isready
+  preStopHook:
+    http:
+      path: /stop
   resources:
     limits:
       memory: 1024Mi
