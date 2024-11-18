@@ -5,11 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.result_object.getOrThrow
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -18,18 +17,19 @@ import io.ktor.serialization.jackson.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.callid.*
 import io.ktor.server.request.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.slf4j.LoggerFactory
 
 private suspend fun HttpResponse.proxyTilSpeed(call: RoutingCall) {
-    call.respond(status, body())
+    call.respondText(Json, status) { bodyAsText() }
 }
 
 fun Route.api(azureTokenProvider: AzureTokenProvider, objectMapper: ObjectMapper) {
     val speedClient = HttpClient(CIO) {
         val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
         install(Logging) {
-            this.logger = object : io.ktor.client.plugins.logging.Logger {
+            this.logger = object : Logger {
                 override fun log(message: String) {
                     sikkerlogg.info("ktor speed client:\n$message")
                 }
