@@ -52,7 +52,7 @@ subprojects {
                 doFirst {
                     manifest {
                         val runtimeClasspath by configurations
-                        attributes["Main-Class"] = "no.nav.helse.speed.${project.name}.AppKt"
+                        attributes["Main-Class"] = "no.nav.helse.speed.${project.name.replace("-", "_")}.AppKt"
                         attributes["Class-Path"] = runtimeClasspath.joinToString(separator = " ") {
                             it.name
                         }
