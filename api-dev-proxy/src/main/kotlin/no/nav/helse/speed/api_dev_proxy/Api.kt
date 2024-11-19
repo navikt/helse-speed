@@ -27,8 +27,12 @@ import io.ktor.server.request.receiveText
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingCall
+import io.ktor.server.routing.accept
+import io.ktor.server.routing.contentType
 import io.ktor.server.routing.delete
+import io.ktor.server.routing.header
 import io.ktor.server.routing.post
+import io.ktor.server.routing.route
 import org.slf4j.LoggerFactory
 
 private suspend fun HttpResponse.proxyTilSpeed(call: RoutingCall) {
@@ -56,22 +60,26 @@ fun Route.api(azureTokenProvider: AzureTokenProvider, objectMapper: ObjectMapper
             }
         }
     }
-    post {
-        val path = call.request.path()
-        speedClient.post(path) {
-            header("callId", call.callId)
-            accept(Json)
-            contentType(Json)
-            setBody(call.receiveText())
-        }.proxyTilSpeed(call)
+
+    route("/api/{...}") {
+        post{
+            val path = call.request.path()
+            speedClient.post(path) {
+                header("callId", call.callId)
+                accept(Json)
+                contentType(Json)
+                setBody(call.receiveText())
+            }.proxyTilSpeed(call)
+        }
+        delete {
+            val path = call.request.path()
+            speedClient.delete(path) {
+                header("callId", call.callId)
+                accept(Json)
+                contentType(Json)
+                setBody(call.receiveText())
+            }.proxyTilSpeed(call)
+        }
     }
-    delete {
-        val path = call.request.path()
-        speedClient.delete(path) {
-            header("callId", call.callId)
-            accept(Json)
-            contentType(Json)
-            setBody(call.receiveText())
-        }.proxyTilSpeed(call)
-    }
+
 }
