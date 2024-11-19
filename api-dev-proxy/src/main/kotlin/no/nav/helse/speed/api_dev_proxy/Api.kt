@@ -1,24 +1,34 @@
 package no.nav.helse.speed.api_dev_proxy
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.result_object.getOrThrow
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.request.accept
+import io.ktor.client.request.delete
+import io.ktor.client.request.header
+import io.ktor.client.request.headers
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType.Application.Json
-import io.ktor.serialization.jackson.*
-import io.ktor.server.plugins.*
-import io.ktor.server.plugins.callid.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import io.ktor.serialization.jackson.JacksonConverter
+import io.ktor.server.plugins.callid.callId
+import io.ktor.server.request.path
+import io.ktor.server.request.receiveText
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.RoutingCall
+import io.ktor.server.routing.delete
+import io.ktor.server.routing.post
 import org.slf4j.LoggerFactory
 
 private suspend fun HttpResponse.proxyTilSpeed(call: RoutingCall) {
@@ -39,81 +49,29 @@ fun Route.api(azureTokenProvider: AzureTokenProvider, objectMapper: ObjectMapper
             register(Json, JacksonConverter(objectMapper))
         }
         defaultRequest {
-            url("http://speed-api/api/")
+            url("http://speed-api")
             headers {
+                sikkerlogg.info("Henter token fra Azure")
                 set(HttpHeaders.Authorization, "Bearer ${azureTokenProvider.bearerToken("api://dev-gcp.tbd.speed-api/.default").getOrThrow().token}")
             }
         }
     }
-    post("/api/person") {
-        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
-        val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
-
-        speedClient.post("person") {
-            header("callId", callId)
+    post {
+        val path = call.request.path()
+        speedClient.post(path) {
+            header("callId", call.callId)
             accept(Json)
             contentType(Json)
-            setBody(request)
+            setBody(call.receiveText())
         }.proxyTilSpeed(call)
     }
-    route("/api/ident") {
-        post {
-            val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
-            val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
-            speedClient.post("ident") {
-                header("callId", callId)
-                accept(Json)
-                contentType(Json)
-                setBody(request)
-            }.proxyTilSpeed(call)
-        }
-
-        delete {
-            val request = call.receiveNullable<SlettIdentRequest>() ?: throw BadRequestException("Mangler identer")
-            val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
-            speedClient.delete("ident") {
-                header("callId", callId)
-                accept(Json)
-                contentType(Json)
-                setBody(request)
-            }.proxyTilSpeed(call)
-        }
-    }
-    post("/api/historiske_identer") {
-        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
-        val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
-        speedClient.post("historiske_identer") {
-            header("callId", callId)
+    delete {
+        val path = call.request.path()
+        speedClient.delete(path) {
+            header("callId", call.callId)
             accept(Json)
             contentType(Json)
-            setBody(request)
+            setBody(call.receiveText())
         }.proxyTilSpeed(call)
     }
-    post("/api/vergemål_eller_fremtidsfullmakt") {
-        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
-        val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
-        speedClient.post("vergemål_eller_fremtidsfullmakt") {
-            header("callId", callId)
-            accept(Json)
-            contentType(Json)
-            setBody(request)
-        }.proxyTilSpeed(call)
-    }
-
-    post("/api/geografisk_tilknytning") {
-        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
-        val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
-        speedClient.post("geografisk_tilknytning") {
-            header("callId", callId)
-            accept(Json)
-            contentType(Json)
-            setBody(request)
-        }.proxyTilSpeed(call)
-    }
-
 }
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class IdentRequest(val ident: String)
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class SlettIdentRequest(val identer: List<String>)
