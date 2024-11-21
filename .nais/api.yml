@@ -42,6 +42,7 @@ spec:
         - application: speed-async
         - application: spennende
         - application: spedisjon
+        - application: spedisjon-async
         - application: sparkel-gosys
         - application: sparkel-norg
         - application: sparkel-personinfo
