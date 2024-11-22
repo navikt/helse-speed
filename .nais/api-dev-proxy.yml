@@ -40,6 +40,19 @@ spec:
       rules:
         - application: spanner
         - application: spleis-api
+        - application: spaghet
+        - application: speed-async
+        - application: spennende
+        - application: spedisjon
+        - application: spedisjon-async
+        - application: sparkel-gosys
+        - application: sparkel-norg
+        - application: sparkel-personinfo
+        - application: sporbar
+        - application: spre-gosys
+        - application: spre-styringsinfo
+        - application: vedtaksfeed
+        - application: spleis-testdata
     outbound:
       rules:
         - application: speed-api
