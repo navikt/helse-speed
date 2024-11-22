@@ -11,6 +11,7 @@ import io.ktor.server.application.ApplicationCallPipeline
 import io.ktor.server.application.call
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.request.header
 import io.ktor.server.routing.*
 import io.micrometer.core.instrument.Clock
 import io.micrometer.prometheusmetrics.PrometheusConfig
@@ -66,10 +67,17 @@ fun launchApp(env: Map<String, String>) {
         objectMapper = objectmapper,
         applicationLogger = logg,
         callLogger = LoggerFactory.getLogger("no.nav.helse.speed.api.CallLogging"),
-        timersConfig = { call, _ -> tag("azp_name", call.principal<JWTPrincipal>()?.get("azp_name") ?: "n/a") },
+        timersConfig = { call, _ ->
+            this
+                .tag("azp_name", call.principal<JWTPrincipal>()?.get("azp_name") ?: "n/a")
+                // https://github.com/linkerd/polixy/blob/main/DESIGN.md#l5d-client-id-client-id
+                // eksempel: <APP>.<NAMESPACE>.serviceaccount.identity.linkerd.cluster.local
+                .tag("konsument", call.request.header("L5d-Client-Id") ?: "n/a")
+        },
         mdcEntries = mapOf(
-            "azp_name" to { call: ApplicationCall -> call.principal<JWTPrincipal>()?.get("azp_name") }
-        )
+            "azp_name" to { call: ApplicationCall -> call.principal<JWTPrincipal>()?.get("azp_name") },
+            "konsument" to { call: ApplicationCall -> call.request.header("L5d-Client-Id") }
+        ),
     ) {
         authentication { azureApp.konfigurerJwtAuth(this) }
         routing {
