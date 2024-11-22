@@ -19,6 +19,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType.Application.Json
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode.Companion.OK
 import io.ktor.http.contentType
 import io.ktor.serialization.jackson.JacksonConverter
 import io.ktor.server.plugins.callid.callId
@@ -27,10 +28,7 @@ import io.ktor.server.request.receiveText
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingCall
-import io.ktor.server.routing.accept
-import io.ktor.server.routing.contentType
 import io.ktor.server.routing.delete
-import io.ktor.server.routing.header
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import org.slf4j.LoggerFactory
@@ -62,7 +60,7 @@ fun Route.api(azureTokenProvider: AzureTokenProvider, objectMapper: ObjectMapper
     }
 
     route("/api/{...}") {
-        post{
+        post {
             val path = call.request.path()
             speedClient.post(path) {
                 header("callId", call.callId)
@@ -82,4 +80,15 @@ fun Route.api(azureTokenProvider: AzureTokenProvider, objectMapper: ObjectMapper
         }
     }
 
+    post("/token") {
+        call.respondText(Json, OK) {
+            """
+            {
+                "access_token": "nekot_ssecca",
+                "token_type": "Bearer",
+                "expires_in": 3600
+            }
+            """
+        }
+    }
 }
