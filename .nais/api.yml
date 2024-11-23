@@ -16,6 +16,7 @@ spec:
     path: /isalive
   readiness:
     path: /isready
+    periodSeconds: 1
   preStopHook:
     http:
       path: /stop
