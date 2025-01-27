@@ -1,4 +1,4 @@
-val rapidsAndRiversVersion = "2024120608421733470968.fc0a3d5e3685"
+val rapidsAndRiversVersion = "2025012712551737978926.de930d8e0feb"
 val tbdLibsVersion: String by project
 val mockkVersion = "1.13.9"
 val avroVersion = "1.12.0"
