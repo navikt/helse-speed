@@ -6,7 +6,7 @@ Et mellomlager for PDL som bruker Redis for caching.
 `speed-async` reagerer på identendringsmeldinger via PDLs LEESAH-topic og sørger for at cachen slettes for de
 aktuelle identene.
 
-## Komme i gang
+## Kom i gang
 
 For å komme kjapt i gang anbefales det å bruke `tbd-libs`.
 Siste versjon finner du på [pakkeoversikten](https://github.com/navikt/tbd-libs/packages/2297521).
