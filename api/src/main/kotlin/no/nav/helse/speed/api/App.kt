@@ -90,10 +90,10 @@ fun launchApp(env: Map<String, String>) {
 }
 
 private fun lagJedistilkobling(env: Map<String, String>): JedisPool {
-    val uri = URI(env.getValue("REDIS_URI_MELLOMLAGER"))
+    val uri = URI(env.getValue("VALKEY_URI_MELLOMLAGER"))
     val config = DefaultJedisClientConfig.builder()
-        .user(env.getValue("REDIS_USERNAME_MELLOMLAGER"))
-        .password(env.getValue("REDIS_PASSWORD_MELLOMLAGER"))
+        .user(env.getValue("VALKEY_USERNAME_MELLOMLAGER"))
+        .password(env.getValue("VALKEY_PASSWORD_MELLOMLAGER"))
         .ssl(true)
         .hostnameVerifier { hostname, _ ->
             val evaluering = hostname == uri.host
