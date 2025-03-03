@@ -68,6 +68,10 @@ fun launchApp(env: Map<String, String>) {
         applicationLogger = logg,
         callLogger = LoggerFactory.getLogger("no.nav.helse.speed.api.CallLogging"),
         timersConfig = { call, _ ->
+            val headersAsString = call.request.headers.entries()
+                .filterNot { (key, _) -> key.lowercase() == "authorization" }
+                .joinToString("; ") { "${it.key}=${it.value}" }
+            sikkerlogg.info("headers for request: $headersAsString")
             this
                 .tag("azp_name", call.principal<JWTPrincipal>()?.get("azp_name") ?: "n/a")
                 // https://github.com/linkerd/polixy/blob/main/DESIGN.md#l5d-client-id-client-id
