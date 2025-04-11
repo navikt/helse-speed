@@ -19,6 +19,13 @@ class LeesahDeserializer : Deserializer<GenericRecord> {
             sikkerlogg.feilVedDeserialisering(data, exception, "V3")
         }
 
+        // 11.04.25: V4 er i bruk i dev. Skjemaendringer kan komme før V4 går i prod.
+        try {
+            return deserialize(data, v4Skjema)
+        } catch (exception: Exception) {
+            sikkerlogg.feilVedDeserialisering(data, exception, "V4")
+        }
+
         // Prøv forrige versjon
         try {
             return deserialize(data, v2Skjema)
@@ -48,5 +55,6 @@ class LeesahDeserializer : Deserializer<GenericRecord> {
             Schema.Parser().parse(LeesahDeserializer::class.java.getResourceAsStream("/pdl/Personhendelse_$this.avsc"))
         private val v2Skjema = "V2".lastSkjema()
         private val v3Skjema = "V3".lastSkjema()
+        private val v4Skjema = "V4".lastSkjema()
     }
 }
