@@ -39,6 +39,7 @@ spec:
     logging:
       destinations:
         - id: elastic
+        - id: loki
   kafka:
     pool: {{kafkaPool}}
   accessPolicy:
