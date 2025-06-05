@@ -13,17 +13,17 @@ class LeesahDeserializer : Deserializer<GenericRecord> {
     private val decoderFactory: DecoderFactory = DecoderFactory.get()
 
     override fun deserialize(topic: String, data: ByteArray): GenericRecord {
-        try {
-            return deserialize(data, v3Skjema)
-        } catch (exception: Exception) {
-            sikkerlogg.feilVedDeserialisering(data, exception, "V3")
-        }
-
         // 11.04.25: V4 er i bruk i dev. Skjemaendringer kan komme før V4 går i prod.
         try {
             return deserialize(data, v4Skjema)
         } catch (exception: Exception) {
             sikkerlogg.feilVedDeserialisering(data, exception, "V4")
+        }
+
+        try {
+            return deserialize(data, v3Skjema)
+        } catch (exception: Exception) {
+            sikkerlogg.feilVedDeserialisering(data, exception, "V3")
         }
 
         // Prøv forrige versjon
