@@ -59,4 +59,6 @@ spec:
         - application: spleis-testdata
     outbound:
       rules:
+        - application: logging
+          namespace: nais-system
         - application: speed-api

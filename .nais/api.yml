@@ -58,6 +58,9 @@ spec:
         - application: {{application}}
         {{/each }}
     outbound:
+      rules:
+        - application: logging
+          namespace: nais-system
       external:
         - host: {{pdlHostname}}
   valkey:
