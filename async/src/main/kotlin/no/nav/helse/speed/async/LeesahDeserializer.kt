@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
 class LeesahDeserializer : Deserializer<GenericRecord> {
     private val decoderFactory: DecoderFactory = DecoderFactory.get()
 
-    private val tilgjengeligeSkjemaVersjoner = listOf("V5", "V4", "V3", "V2")
+    private val tilgjengeligeSkjemaVersjoner = listOf("V6", "V5", "V4", "V3", "V2")
         .map { versjon ->
             versjon to versjon.lastSkjema()
         }
