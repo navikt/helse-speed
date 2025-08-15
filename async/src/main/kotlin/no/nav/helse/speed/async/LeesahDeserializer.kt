@@ -12,27 +12,22 @@ import org.slf4j.LoggerFactory
 class LeesahDeserializer : Deserializer<GenericRecord> {
     private val decoderFactory: DecoderFactory = DecoderFactory.get()
 
+    private val tilgjengeligeSkjemaVersjoner = listOf("V5", "V4", "V3", "V2")
+        .map { versjon ->
+            versjon to versjon.lastSkjema()
+        }
+
     override fun deserialize(topic: String, data: ByteArray): GenericRecord {
-        // 11.04.25: V4 er i bruk i dev. Skjemaendringer kan komme før V4 går i prod.
-        try {
-            return deserialize(data, v4Skjema)
-        } catch (exception: Exception) {
-            sikkerlogg.feilVedDeserialisering(data, exception, "V4")
-        }
-
-        try {
-            return deserialize(data, v3Skjema)
-        } catch (exception: Exception) {
-            sikkerlogg.feilVedDeserialisering(data, exception, "V3")
-        }
-
-        // Prøv forrige versjon
-        try {
-            return deserialize(data, v2Skjema)
-        } catch (exception: Exception) {
-            sikkerlogg.feilVedDeserialisering(data, exception, "V2")
-            throw exception
-        }
+        var lastException: Exception? = null
+        return tilgjengeligeSkjemaVersjoner.firstNotNullOfOrNull { (versjon, skjema) ->
+            try {
+                deserialize(data, skjema)
+            } catch (exception: Exception) {
+                sikkerlogg.feilVedDeserialisering(data, exception, versjon)
+                lastException = exception
+                null
+            }
+        } ?: throw lastException!!
     }
 
     private fun deserialize(data: ByteArray, schema: Schema) : GenericRecord {
@@ -53,8 +48,5 @@ class LeesahDeserializer : Deserializer<GenericRecord> {
             warn("Klarte ikke å deserialisere Personhendelse-melding fra Leesah med $versjon. Base64='${Base64.getEncoder().encodeToString(data)}'", throwable)
         private fun String.lastSkjema() =
             Schema.Parser().parse(LeesahDeserializer::class.java.getResourceAsStream("/pdl/Personhendelse_$this.avsc"))
-        private val v2Skjema = "V2".lastSkjema()
-        private val v3Skjema = "V3".lastSkjema()
-        private val v4Skjema = "V4".lastSkjema()
     }
 }
