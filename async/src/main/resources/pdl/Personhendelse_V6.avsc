@@ -79,7 +79,7 @@
     },
     {
       "default": null,
-      "name": "deltbosted",
+      "name": "deltBosted",
       "type": [
         "null",
         {
@@ -103,523 +103,219 @@
               ]
             },
             {
-              "name": "adresse",
-              "type": {
-                "fields": [
-                  {
-                    "default": null,
-                    "name": "adressegradering",
-                    "type": [
-                      "null",
-                      {
-                        "name": "Adressegradering",
-                        "symbols": [
-                          "UGRADERT",
-                          "KLIENTADRESSE",
-                          "FORTROLIG",
-                          "STRENGT_FORTROLIG"
-                        ],
-                        "type": "enum"
-                      }
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "adresseIdentifikatorFraMatrikkelen",
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "naerAdresseIdentifikatorFraMatrikkelen",
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "bruksenhetsnummer",
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "coAdressenavn",
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "grunnkrets",
-                    "type": [
-                      "null",
-                      "long"
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "vegadresse",
-                    "type": [
-                      "null",
-                      {
-                        "fields": [
-                          {
-                            "name": "kommunenummer",
-                            "type": "string"
-                          },
-                          {
-                            "default": null,
-                            "name": "bruksenhetstype",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "name": "adressenavn",
-                            "type": "string"
-                          },
-                          {
-                            "default": null,
-                            "name": "adressenummer",
-                            "type": [
-                              "null",
-                              {
-                                "fields": [
-                                  {
-                                    "name": "husnummer",
-                                    "type": "string"
-                                  },
-                                  {
-                                    "default": null,
-                                    "name": "husbokstav",
-                                    "type": [
-                                      "null",
-                                      "string"
-                                    ]
-                                  }
-                                ],
-                                "name": "Adressenummer",
-                                "type": "record"
-                              }
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "adressekode",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "adressetilleggsnavn",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "poststed",
-                            "type": [
-                              "null",
-                              {
-                                "fields": [
-                                  {
-                                    "default": null,
-                                    "name": "poststedsnavn",
-                                    "type": [
-                                      "null",
-                                      "string"
-                                    ]
-                                  },
-                                  {
-                                    "default": null,
-                                    "name": "postnummer",
-                                    "type": [
-                                      "null",
-                                      "string"
-                                    ]
-                                  }
-                                ],
-                                "name": "Poststed",
-                                "type": "record"
-                              }
-                            ]
-                          }
-                        ],
-                        "name": "AdresseVegadresse",
-                        "type": "record"
-                      }
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "matrikkeladresse",
-                    "type": [
-                      "null",
-                      {
-                        "fields": [
-                          {
-                            "default": null,
-                            "name": "bruksenhetstype",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "name": "matrikkelnummer",
-                            "type": {
-                              "fields": [
-                                {
-                                  "name": "kommunenummer",
-                                  "type": "string"
-                                },
-                                {
-                                  "name": "gaardsnummer",
-                                  "type": "int"
-                                },
-                                {
-                                  "name": "bruksnummer",
-                                  "type": "int"
-                                },
-                                {
-                                  "default": null,
-                                  "name": "festenummer",
-                                  "type": [
-                                    "null",
-                                    "int"
-                                  ]
-                                }
-                              ],
-                              "name": "Matrikkelnummer",
-                              "type": "record"
+              "default": null,
+              "name": "coAdressenavn",
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            {
+              "default": null,
+              "name": "vegadresse",
+              "type": [
+                "null",
+                {
+                  "fields": [
+                    {
+                      "default": null,
+                      "name": "matrikkelId",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "husnummer",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "husbokstav",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "bruksenhetsnummer",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "adressenavn",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "kommunenummer",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "bydelsnummer",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "tilleggsnavn",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "postnummer",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "koordinater",
+                      "type": [
+                        "null",
+                        {
+                          "fields": [
+                            {
+                              "default": null,
+                              "name": "x",
+                              "type": [
+                                "null",
+                                "float"
+                              ]
+                            },
+                            {
+                              "default": null,
+                              "name": "y",
+                              "type": [
+                                "null",
+                                "float"
+                              ]
+                            },
+                            {
+                              "default": null,
+                              "name": "z",
+                              "type": [
+                                "null",
+                                "float"
+                              ]
                             }
-                          },
-                          {
-                            "default": null,
-                            "name": "undernummer",
-                            "type": [
-                              "null",
-                              "int"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "adressetilleggsnavn",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "poststed",
-                            "type": [
-                              "null",
-                              "Poststed"
-                            ]
-                          }
-                        ],
-                        "name": "AdresseMatrikkeladresse",
-                        "type": "record"
-                      }
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "ukjentBosted",
-                    "type": [
-                      "null",
-                      {
-                        "fields": [
-                          {
-                            "default": null,
-                            "name": "bostedskommune",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          }
-                        ],
-                        "name": "UkjentBosted",
-                        "type": "record"
-                      }
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "utenlandskAdresse",
-                    "type": [
-                      "null",
-                      {
-                        "fields": [
-                          {
-                            "default": null,
-                            "name": "adressenavnNummer",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "bygningEtasjeLeilighet",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "bygning",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "etasjenummer",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "boenhet",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "postboksNummerNavn",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "postkode",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "bySted",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "regionDistriktOmraade",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "distriktsnavn",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "region",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "name": "landkode",
-                            "type": "string"
-                          }
-                        ],
-                        "name": "AdresseUtenlandskAdresse",
-                        "type": "record"
-                      }
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "utenlandskAdresseIFrittFormat",
-                    "type": [
-                      "null",
-                      {
-                        "fields": [
-                          {
-                            "name": "adresselinje",
-                            "type": {
-                              "items": "string",
-                              "type": "array"
-                            }
-                          },
-                          {
-                            "default": null,
-                            "name": "postkode",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "byEllerStedsnavn",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "name": "landkode",
-                            "type": "string"
-                          }
-                        ],
-                        "name": "AdresseUtenlandskAdresseIFrittFormat",
-                        "type": "record"
-                      }
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "postboksadresse",
-                    "type": [
-                      "null",
-                      {
-                        "fields": [
-                          {
-                            "default": null,
-                            "name": "postbokseier",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "poststed",
-                            "type": [
-                              "null",
-                              "Poststed"
-                            ]
-                          },
-                          {
-                            "name": "postboks",
-                            "type": "string"
-                          }
-                        ],
-                        "name": "AdressePostboksadresse",
-                        "type": "record"
-                      }
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "vegadresseForPost",
-                    "type": [
-                      "null",
-                      {
-                        "fields": [
-                          {
-                            "name": "adressenavn",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "adressenummer",
-                            "type": [
-                              "null",
-                              "Adressenummer"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "adressekode",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "adressetilleggsnavn",
-                            "type": [
-                              "null",
-                              "string"
-                            ]
-                          },
-                          {
-                            "default": null,
-                            "name": "poststed",
-                            "type": [
-                              "null",
-                              "Poststed"
-                            ]
-                          }
-                        ],
-                        "name": "AdresseVegadresseForPost",
-                        "type": "record"
-                      }
-                    ]
-                  },
-                  {
-                    "default": null,
-                    "name": "postadresseIFrittFormat",
-                    "type": [
-                      "null",
-                      {
-                        "fields": [
-                          {
-                            "name": "adresselinje",
-                            "type": {
-                              "items": "string",
-                              "type": "array"
-                            }
-                          },
-                          {
-                            "default": null,
-                            "name": "poststed",
-                            "type": [
-                              "null",
-                              "Poststed"
-                            ]
-                          }
-                        ],
-                        "name": "AdressePostadresseIFrittFormat",
-                        "type": "record"
-                      }
-                    ]
-                  }
-                ],
-                "name": "Adresse",
-                "namespace": "no.nav.person.pdl.leesah.common.adresse",
-                "type": "record"
-              }
+                          ],
+                          "name": "Koordinater",
+                          "type": "record"
+                        }
+                      ]
+                    }
+                  ],
+                  "name": "Vegadresse",
+                  "namespace": "no.nav.person.pdl.leesah.common.adresse",
+                  "type": "record"
+                }
+              ]
+            },
+            {
+              "default": null,
+              "name": "matrikkeladresse",
+              "type": [
+                "null",
+                {
+                  "fields": [
+                    {
+                      "default": null,
+                      "name": "matrikkelId",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "bruksenhetsnummer",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "tilleggsnavn",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "postnummer",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "kommunenummer",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    {
+                      "default": null,
+                      "name": "koordinater",
+                      "type": [
+                        "null",
+                        "Koordinater"
+                      ]
+                    }
+                  ],
+                  "name": "Matrikkeladresse",
+                  "namespace": "no.nav.person.pdl.leesah.common.adresse",
+                  "type": "record"
+                }
+              ]
+            },
+            {
+              "default": null,
+              "name": "ukjentBosted",
+              "type": [
+                "null",
+                {
+                  "fields": [
+                    {
+                      "default": null,
+                      "name": "bostedskommune",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  ],
+                  "name": "UkjentBosted",
+                  "namespace": "no.nav.person.pdl.leesah.common.adresse",
+                  "type": "record"
+                }
+              ]
             }
           ],
           "name": "DeltBosted",
@@ -1482,122 +1178,7 @@
               "name": "vegadresse",
               "type": [
                 "null",
-                {
-                  "fields": [
-                    {
-                      "default": null,
-                      "name": "matrikkelId",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "husnummer",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "husbokstav",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "bruksenhetsnummer",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "adressenavn",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "kommunenummer",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "bydelsnummer",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "tilleggsnavn",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "postnummer",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "koordinater",
-                      "type": [
-                        "null",
-                        {
-                          "fields": [
-                            {
-                              "default": null,
-                              "name": "x",
-                              "type": [
-                                "null",
-                                "float"
-                              ]
-                            },
-                            {
-                              "default": null,
-                              "name": "y",
-                              "type": [
-                                "null",
-                                "float"
-                              ]
-                            },
-                            {
-                              "default": null,
-                              "name": "z",
-                              "type": [
-                                "null",
-                                "float"
-                              ]
-                            }
-                          ],
-                          "name": "Koordinater",
-                          "type": "record"
-                        }
-                      ]
-                    }
-                  ],
-                  "name": "Vegadresse",
-                  "namespace": "no.nav.person.pdl.leesah.common.adresse",
-                  "type": "record"
-                }
+                "no.nav.person.pdl.leesah.common.adresse.Vegadresse"
               ]
             },
             {
@@ -1838,61 +1419,7 @@
               "name": "matrikkeladresse",
               "type": [
                 "null",
-                {
-                  "fields": [
-                    {
-                      "default": null,
-                      "name": "matrikkelId",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "bruksenhetsnummer",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "tilleggsnavn",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "postnummer",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "kommunenummer",
-                      "type": [
-                        "null",
-                        "string"
-                      ]
-                    },
-                    {
-                      "default": null,
-                      "name": "koordinater",
-                      "type": [
-                        "null",
-                        "Koordinater"
-                      ]
-                    }
-                  ],
-                  "name": "Matrikkeladresse",
-                  "namespace": "no.nav.person.pdl.leesah.common.adresse",
-                  "type": "record"
-                }
+                "no.nav.person.pdl.leesah.common.adresse.Matrikkeladresse"
               ]
             },
             {
