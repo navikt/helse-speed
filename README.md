@@ -13,7 +13,7 @@ Siste versjon finner du på [pakkeoversikten](https://github.com/navikt/tbd-libs
 
 **build.gradle.kts**:
 ```kotlin
-val tbdLibsVersion = "2025.08.16-09.21-71db7cad"
+val tbdLibsVersion = "2025.11.04-10.12-3a167132"
 
 dependencies {
     api("com.github.navikt.tbd-libs:azure-token-client-default:$tbdLibsVersion")
