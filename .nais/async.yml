@@ -30,8 +30,6 @@ spec:
   preStopHook:
     http:
       path: /stop
-  secureLogs:
-    enabled: true
   observability:
     autoInstrumentation:
       enabled: true
