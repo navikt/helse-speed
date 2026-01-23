@@ -1,7 +1,7 @@
-val rapidsAndRiversVersion = "2026011411051768385145.e8ebad1177b4"
+val rapidsAndRiversVersion = "2026012313571769173069.a16a0229fd97"
 val tbdLibsVersion: String by project
 val mockkVersion = "1.13.17"
-val avroVersion = "1.12.0"
+val avroVersion = "1.12.1"
 
 dependencies {
     api("com.github.navikt:rapids-and-rivers:$rapidsAndRiversVersion")
