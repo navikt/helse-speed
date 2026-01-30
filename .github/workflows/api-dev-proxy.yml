@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'api-dev-proxy/**'
-      - '.github/workflows/api-dev-proxy.yml.yml'
+      - '.github/workflows/api-dev-proxy.yml'
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
       - '.nais/api-dev-proxy.yml'
