@@ -13,6 +13,7 @@ on:
       - '.nais/api.yml'
       - '.nais/api-dev.json'
       - '.nais/api-prod.json'
+      - 'Dockerfile'
 
 jobs:
   build:
