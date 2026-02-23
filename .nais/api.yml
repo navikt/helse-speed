@@ -52,6 +52,7 @@ spec:
         - application: spre-gosys
         - application: spre-styringsinfo
         - application: vedtaksfeed
+        - application: spesialist
         {{#each accessPolicy.inbound.rules }}
         - application: {{application}}
         {{/each }}
