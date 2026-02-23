@@ -55,6 +55,7 @@ spec:
         - application: spre-styringsinfo
         - application: vedtaksfeed
         - application: spleis-testdata
+        - application: spesialist
     outbound:
       rules:
         - application: logging
