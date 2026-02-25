@@ -43,6 +43,9 @@ class Identtjeneste(
         return hentIdentFraMellomlager(ident) ?: hentFraPDL(ident, callId)
     }
 
+    fun hentAlleIdenter(ident: String, callId: String): Result<AlleIdenterResultat> {
+        return hentAlleIdenterFraMellomlager(ident) ?: hentAlleIdenterFraPDL(ident, callId)
+    }
     fun hentHistoriskeFolkeregisterIdenter(ident: String, callId: String): Result<HistoriskeIdenterResultat> {
         return hentHistoriskeIdenterFraMellomlager(ident) ?: hentHistoriskeIdenterFraPDL(ident, callId)
     }
@@ -62,6 +65,7 @@ class Identtjeneste(
                             mellomlagringsnøkkel(CACHE_PREFIX_IDENTOPPSLAG, it),
                             mellomlagringsnøkkel(CACHE_PREFIX_PERSONINFOOPPSLAG, it),
                             mellomlagringsnøkkel(CACHE_PREFIX_HISTORISKE_IDENTEROPPSLAG, it),
+                            mellomlagringsnøkkel(CACHE_PREFIX_ALLE_IDENTEROPPSLAG, it),
                             mellomlagringsnøkkel(CACHE_PREFIX_VERGEMÅLOPPSLAG, it),
                             mellomlagringsnøkkel(CACHE_PREFIX_GEOGRAFISK_TILKNYTNINGOPPSLAG, it),
                         )
@@ -79,6 +83,9 @@ class Identtjeneste(
     }
     private fun hentIdentFraMellomlager(ident: String): Result.Ok<Identer>? {
         return hentFraMellomlager<Identer>(mellomlagringsnøkkel(CACHE_PREFIX_IDENTOPPSLAG, ident))
+    }
+    private fun hentAlleIdenterFraMellomlager(ident: String): Result.Ok<AlleIdenterResultat.Identer>? {
+        return hentFraMellomlager<AlleIdenterResultat.Identer>(mellomlagringsnøkkel(CACHE_PREFIX_ALLE_IDENTEROPPSLAG, ident))
     }
     private fun hentHistoriskeIdenterFraMellomlager(ident: String): Result.Ok<HistoriskeIdenterResultat.Identer>? {
         return hentFraMellomlager<HistoriskeIdenterResultat.Identer>(mellomlagringsnøkkel(CACHE_PREFIX_HISTORISKE_IDENTEROPPSLAG, ident))
@@ -101,6 +108,29 @@ class Identtjeneste(
             sikkerlogg.error("Kunne ikke koble til jedis, fall-backer til ingen cache: ${err.message}", err)
             null
         }
+    }
+
+    private fun hentAlleIdenterFraPDL(ident: String, callId: String): Result<AlleIdenterResultat> {
+        return pdlClient.hentAlleIdenter(ident, callId).map { identer ->
+            when (identer) {
+                is PdlResultat.BadRequest -> identer.error.error()
+                is PdlResultat.GenericError -> "${identer.error} (${identer.code})".error()
+                PdlResultat.NotFound -> AlleIdenterResultat.FantIkkeIdenter.ok()
+                is PdlResultat.Ok -> AlleIdenterResultat.Identer(
+                    identer = identer.value.gjeldende.map { AlleIdenterResultat.Ident(it.ident, mapIdentType(it), gjeldende = true) } +
+                              identer.value.historiske.map { AlleIdenterResultat.Ident(it.ident, mapIdentType(it), gjeldende = false) },
+                    kilde = Kilde.PDL
+                )
+                    .also { lagreAlleIdenterTilMellomlager(ident, it) }
+                    .ok()
+            }
+        }
+    }
+
+    private fun mapIdentType(ident: Ident): AlleIdenterResultat.IdentType = when (ident) {
+        is Ident.Fødselsnummer -> AlleIdenterResultat.IdentType.FOLKEREGISTERIDENT
+        is Ident.AktørId -> AlleIdenterResultat.IdentType.AKTORID
+        is Ident.NPID -> AlleIdenterResultat.IdentType.NPID
     }
 
     private fun hentHistoriskeIdenterFraPDL(ident: String, callId: String): Result<HistoriskeIdenterResultat> {
@@ -221,6 +251,9 @@ class Identtjeneste(
         }
     }
 
+    private fun lagreAlleIdenterTilMellomlager(ident: String, resultat: AlleIdenterResultat.Identer) {
+        lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_ALLE_IDENTEROPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
+    }
     private fun lagrePersonTilMellomlager(ident: String, resultat: Person) {
         lagreTilMellomlager(mellomlagringsnøkkel(CACHE_PREFIX_PERSONINFOOPPSLAG, ident), resultat.copy(kilde = Kilde.CACHE))
     }
@@ -280,6 +313,7 @@ class Identtjeneste(
         private const val CACHE_PREFIX_IDENTOPPSLAG = "ident_"
         private const val CACHE_PREFIX_PERSONINFOOPPSLAG = "personinfo_"
         private const val CACHE_PREFIX_HISTORISKE_IDENTEROPPSLAG = "historiske_identer_"
+        private const val CACHE_PREFIX_ALLE_IDENTEROPPSLAG = "alle_identer_"
         private const val CACHE_PREFIX_VERGEMÅLOPPSLAG = "vergemaal_"
         private const val CACHE_PREFIX_GEOGRAFISK_TILKNYTNINGOPPSLAG = "geografisk_"
         private val IDENT_EXPIRATION_SECONDS: Long = Duration.ofDays(7).toSeconds()
@@ -308,6 +342,22 @@ sealed interface HistoriskeIdenterResultat {
         val kilde: Kilde
     ): HistoriskeIdenterResultat
     data object FantIkkeIdenter: HistoriskeIdenterResultat
+}
+
+sealed interface AlleIdenterResultat {
+    data class Identer(
+        val identer: List<Ident>,
+        val kilde: Kilde
+    ) : AlleIdenterResultat
+    data class Ident(
+        val ident: String,
+        val type: IdentType,
+        val gjeldende: Boolean
+    )
+    enum class IdentType {
+        FOLKEREGISTERIDENT, AKTORID, NPID
+    }
+    data object FantIkkeIdenter : AlleIdenterResultat
 }
 
 sealed interface PersonResultat {
