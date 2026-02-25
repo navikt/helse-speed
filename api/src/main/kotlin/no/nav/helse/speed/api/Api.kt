@@ -80,6 +80,34 @@ fun Route.api(identtjeneste: Identtjeneste) {
             }
         }
     }
+    post("/api/alle_identer") {
+        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
+        val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
+
+        when (val svar = identtjeneste.hentAlleIdenter(request.ident, callId)) {
+            is Result.Error -> throw Exception(svar.error, svar.cause)
+            is Result.Ok -> when (val identer = svar.value) {
+                AlleIdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
+                is AlleIdenterResultat.Identer -> call.respond(HttpStatusCode.OK, AlleIdenterResponse(
+                    identer = identer.identer.map {
+                        AlleIdenterResponse.Ident(
+                            ident = it.ident,
+                            type = when (it.type) {
+                                AlleIdenterResultat.IdentType.FOLKEREGISTERIDENT -> AlleIdenterResponse.IdentType.FOLKEREGISTERIDENT
+                                AlleIdenterResultat.IdentType.AKTORID -> AlleIdenterResponse.IdentType.AKTORID
+                                AlleIdenterResultat.IdentType.NPID -> AlleIdenterResponse.IdentType.NPID
+                            },
+                            gjeldende = it.gjeldende
+                        )
+                    },
+                    kilde = when (identer.kilde) {
+                        Kilde.CACHE -> KildeResponse.CACHE
+                        Kilde.PDL -> KildeResponse.PDL
+                    }
+                ))
+            }
+        }
+    }
     post("/api/historiske_identer") {
         val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
@@ -171,6 +199,19 @@ data class IdenterResponse(
     val fødselsnumre: List<String>,
     val kilde: KildeResponse
 )
+data class AlleIdenterResponse(
+    val identer: List<Ident>,
+    val kilde: KildeResponse
+) {
+    data class Ident(
+        val ident: String,
+        val type: IdentType,
+        val gjeldende: Boolean
+    )
+    enum class IdentType {
+        FOLKEREGISTERIDENT, AKTORID, NPID
+    }
+}
 data class IdentResponse(
     val fødselsnummer: String,
     val aktørId: String,
