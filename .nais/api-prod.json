@@ -5,14 +5,7 @@
   "tenant": "nav.no",
   "accessPolicy": {
     "inbound": {
-      "rules": [
-        {
-          "application": "spanner"
-        },
-        {
-          "application": "spleis-api"
-        }
-      ]
+      "rules": []
     }
   }
 }
