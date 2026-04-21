@@ -1,7 +1,7 @@
 val tbdLibsVersion: String by project
 val logbackClassicVersion = "1.5.32"
 val logbackEncoderVersion = "8.0"
-val jacksonVersion = "2.18.3"
+val jacksonVersion = "2.21.2"
 val ktorVersion = "3.4.2" // bør være samme som i <com.github.navikt.tbd-libs:naisful-app>
 
 dependencies {
