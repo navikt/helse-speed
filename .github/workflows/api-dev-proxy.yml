@@ -11,6 +11,10 @@ on:
       - 'settings.gradle.kts'
       - '.nais/api-dev-proxy.yml'
       - 'Dockerfile'
+  schedule:
+    - cron: '14 9 * * 3'
+      timezone: 'Europe/Oslo'
+  workflow_dispatch:
 
 jobs:
   build:

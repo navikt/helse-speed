@@ -14,6 +14,10 @@ on:
       - '.nais/async-dev.json'
       - '.nais/async-prod.json'
       - 'Dockerfile'
+  schedule:
+    - cron: '12 9 * * 3'
+      timezone: 'Europe/Oslo'
+  workflow_dispatch:
 
 jobs:
   build:
