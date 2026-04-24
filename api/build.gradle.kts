@@ -1,5 +1,5 @@
 val tbdLibsVersion: String by project
-val jedisVersion = "5.1.0"
+val jedisVersion = "7.4.1"
 val logbackClassicVersion = "1.5.32"
 val logbackEncoderVersion = "8.0"
 val jacksonVersion = "2.21.2"
