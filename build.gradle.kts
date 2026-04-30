@@ -4,7 +4,7 @@ val junitJupiterVersion = "6.0.3"
 val tbdLibsVersion = "20260429.1019"
 
 plugins {
-    kotlin("jvm") version "2.3.20" apply false
+    kotlin("jvm") version "2.3.21" apply false
 }
 
 allprojects {
