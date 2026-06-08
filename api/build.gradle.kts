@@ -4,7 +4,7 @@ val logbackClassicVersion = "1.5.33"
 val logbackEncoderVersion = "8.0"
 val jacksonVersion = "2.21.4"
 val ktorVersion = "3.3.3" // bør være samme som i <com.github.navikt.tbd-libs:naisful-app>
-val mockKVersion = "1.14.9"
+val mockKVersion = "1.14.11"
 
 dependencies {
     api("ch.qos.logback:logback-classic:$logbackClassicVersion")
