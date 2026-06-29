@@ -55,7 +55,7 @@ subprojects {
 
             manifest {
                 attributes["Main-Class"] = "no.nav.helse.speed.${project.name.replace("-", "_")}.AppKt"
-                attributes["Class-Path"] = configurations.named("runtimeClasspath").get().joinToString { it.name }
+                attributes["Class-Path"] = configurations.named("runtimeClasspath").get().joinToString(" ") { it.name }
             }
         }
 
