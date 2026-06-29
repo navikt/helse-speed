@@ -27,15 +27,14 @@ allprojects {
 }
 
 subprojects {
-    apply(plugin = "org.jetbrains.kotlin.jvm")
+    plugins.apply("org.jetbrains.kotlin.jvm")
 
-    ext.set("tbdLibsVersion", tbdLibsVersion)
+    extra["tbdLibsVersion"] = tbdLibsVersion
 
-    val testImplementation by configurations
-    val testRuntimeOnly by configurations
     dependencies {
-        testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
-        testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+        // litt teit syntaks, det henger sammen med at kotlin-pluginen ikke er ordentlig til stede ennå, gradle-messig
+        "testImplementation"("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
+        "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
     }
 
     configure<KotlinJvmProjectExtension> {
@@ -45,27 +44,19 @@ subprojects {
     }
 
     tasks {
-        withType<Jar> {
+        val copyDeps = register<Sync>("copyDeps") {
+            description = "Kopierer runtime-avhengigheter til libs-mappa"
+            from(configurations.named("runtimeClasspath"))
+            into(layout.buildDirectory.dir("libs"))
+        }
+        named<Jar>("jar") {
+            dependsOn(copyDeps)
             archiveBaseName.set("app")
 
-            doFirst {
-                manifest {
-                    val runtimeClasspath by configurations
-                    attributes["Main-Class"] = "no.nav.helse.speed.${project.name.replace("-", "_")}.AppKt"
-                    attributes["Class-Path"] = runtimeClasspath.joinToString(separator = " ") {
-                        it.name
-                    }
-                }
+            manifest {
+                attributes["Main-Class"] = "no.nav.helse.speed.${project.name.replace("-", "_")}.AppKt"
+                attributes["Class-Path"] = configurations.named("runtimeClasspath").get().joinToString { it.name }
             }
-        }
-
-        val copyDeps by registering(Sync::class) {
-            val runtimeClasspath by configurations
-            from(runtimeClasspath)
-            into("build/libs")
-        }
-        named("assemble") {
-            dependsOn(copyDeps)
         }
 
         withType<Test> {
@@ -76,4 +67,3 @@ subprojects {
         }
     }
 }
-
