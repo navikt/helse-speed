@@ -3,7 +3,7 @@ val jedisVersion = "5.1.0"
 val logbackClassicVersion = "1.5.35"
 val logbackEncoderVersion = "8.0"
 val jacksonVersion = "2.22.0"
-val ktorVersion = "3.3.3" // bør være samme som i <com.github.navikt.tbd-libs:naisful-app>
+val ktorVersion = "3.5.0" // bør være samme som i <com.github.navikt.tbd-libs:naisful-app>
 val mockKVersion = "1.14.11"
 
 dependencies {
