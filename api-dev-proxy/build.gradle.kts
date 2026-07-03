@@ -2,7 +2,7 @@ val tbdLibsVersion: String by project
 val logbackClassicVersion = "1.5.36"
 val logbackEncoderVersion = "8.0"
 val jacksonVersion = "2.22.0"
-val ktorVersion = "3.3.3" // bør være samme som i <com.github.navikt.tbd-libs:naisful-app>
+val ktorVersion = "3.5.1" // bør være samme som i <com.github.navikt.tbd-libs:naisful-app>
 
 dependencies {
     api("ch.qos.logback:logback-classic:$logbackClassicVersion")
