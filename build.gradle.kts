@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
-val junitJupiterVersion = "6.1.2"
+val junitJupiterVersion = "6.1.3"
 val tbdLibsVersion = "20260811.1310"
 
 plugins {
