@@ -1,6 +1,6 @@
 val tbdLibsVersion: String by project
 val jedisVersion = "5.1.0"
-val logbackClassicVersion = "1.6.2"
+val logbackClassicVersion = "1.6.3"
 val logbackEncoderVersion = "8.0"
 val jacksonVersion = "2.22.1"
 val ktorVersion = "3.5.2" // bør være samme som i <com.github.navikt.tbd-libs:naisful-app>
