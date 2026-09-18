@@ -151,9 +151,17 @@ class PdlClient(
                 if (response.statusCode() != 200) "error (responseCode=${response.statusCode()}) from PDL".error()
                 else response.ok()
             } catch (err: Exception) {
-                err.error("Feil ved sending av http request")
+                err.error("Feil ved sending av http request mot PDL: ${årsak(err, query)}")
             }
         }
+    }
+
+    // feilteksten sendes videre til konsumentene, så vi maskerer eventuelle identer fra spørringen
+    private fun årsak(err: Exception, query: PdlQueryObject): String {
+        val tekst = "${err::class.simpleName ?: err.javaClass.name}: ${err.message}"
+        return query.variables.values
+            .filterIsInstance<String>()
+            .fold(tekst) { melding, verdi -> melding.replace(verdi, "<maskert>") }
     }
 
     private fun hentAlleIdenter(ident: String, historisk: Boolean, callId: String): Result<PdlResultat<PdlIdenter>> {
