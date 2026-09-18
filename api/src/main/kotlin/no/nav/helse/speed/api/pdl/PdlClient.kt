@@ -98,23 +98,34 @@ class PdlClient(
 
     fun hentGeografiskTilknytning(ident: String, callId: String): Result<PdlResultat<PdlGeografiskTilknytning>> {
         return request(hentGeografiskTilknytningQuery(ident), callId).map {
-            convertResponseBody<PdlGeografiskTilknytningDto>(it)
-        }.map {
-            when (it) {
-                is BadRequest -> it
-                is GenericError -> it
-                is NotFound -> it
+            parseResponseBody<PdlGeografiskTilknytningDto>(it)
+        }.map { response ->
+            // PDL svarer http 200 med <hentGeografiskTilknytning: null> og uten errors
+            // dersom personen ikke har registrert geografisk tilknytning. Det er et gyldig svar,
+            // og tilsvarer UDEFINERT (alt er null)
+            if (response.harTomtResultat) return@map Ok(
+                PdlGeografiskTilknytning(
+                    type = PdlGeografiskTilknytning.GeografiskTilknytningType.UDEFINERT,
+                    land = null,
+                    kommune = null,
+                    bydel = null
+                )
+            ).ok()
+            when (val resultat = response.result) {
+                is BadRequest -> resultat
+                is GenericError -> resultat
+                is NotFound -> resultat
                 is Ok -> Ok(
                     PdlGeografiskTilknytning(
-                        type = when (it.value.gtType) {
+                        type = when (resultat.value.gtType) {
                             PdlGeografiskTilknytningDto.GeografiskTilknytningType.BYDEL -> PdlGeografiskTilknytning.GeografiskTilknytningType.BYDEL
                             PdlGeografiskTilknytningDto.GeografiskTilknytningType.KOMMUNE -> PdlGeografiskTilknytning.GeografiskTilknytningType.KOMMUNE
                             PdlGeografiskTilknytningDto.GeografiskTilknytningType.UTLAND -> PdlGeografiskTilknytning.GeografiskTilknytningType.UTLAND
                             PdlGeografiskTilknytningDto.GeografiskTilknytningType.UDEFINERT -> PdlGeografiskTilknytning.GeografiskTilknytningType.UDEFINERT
                         },
-                        bydel = it.value.gtBydel,
-                        land = it.value.gtLand,
-                        kommune = it.value.gtKommune
+                        bydel = resultat.value.gtBydel,
+                        land = resultat.value.gtLand,
+                        kommune = resultat.value.gtKommune
                     )
                 )
             }.ok()
@@ -172,12 +183,15 @@ class PdlClient(
         }
 
     private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): Result<PdlResultat<T>> {
+        return parseResponseBody<T>(response).map { it.result.ok() }
+    }
+
+    private inline fun <reified T> parseResponseBody(response: HttpResponse<String>): Result<PdlResponse<T>> {
         return try {
             val content = response.body()
             sikkerlogg.info("svar fra pdl: http ${response.statusCode()}:\n$content")
             objectMapper
                 .readValue<PdlResponse<T>>(content)
-                .result
                 .ok()
         } catch (err: Exception) {
             err.error(err.message ?: "JSON parsing error")
@@ -192,6 +206,12 @@ data class PdlResponse<T>(
     private val data: Map<String, T>
 ) {
     val valueOrNull get() = data.values.singleOrNull()
+
+    /**
+     * true dersom PDL svarte uten errors, og med nøyaktig én nøkkel i json som har null-verdi.
+     * Dette er et gyldig «tomt» svar fra PDL, ikke en feil.
+     */
+    val harTomtResultat get() = errors.isNullOrEmpty() && data.size == 1 && data.values.single() == null
 
     val result: PdlResultat<T> get() = when(val verdi = valueOrNull) {
         null -> when {
