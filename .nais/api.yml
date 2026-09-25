@@ -53,7 +53,6 @@ spec:
         - application: spre-styringsinfo
         - application: vedtaksfeed
         - application: spesialist
-        - application: spleis-api
         - application: spanner
         {{#each accessPolicy.inbound.rules }}
         - application: {{application}}
