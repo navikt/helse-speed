@@ -5,7 +5,7 @@ sykepengerGradlePlugins = "20261001.1830"
 [libraries]
 avro = "org.apache.avro:avro:1.12.2"
 jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" }
-jedis = "redis.clients:jedis:5.1.0"
+jedis = "redis.clients:jedis:8.0.1"
 ktor-client-contentNegotiation = { module = "io.ktor:ktor-client-content-negotiation" }
 ktor-server-auth = { module = "io.ktor:ktor-server-auth" }
 ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt" }
