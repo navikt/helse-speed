@@ -6,7 +6,6 @@ metadata:
   labels:
     team: tbd
 spec:
-  image: {{image}}
   strategy:
     type: RollingUpdate
   replicas:
@@ -37,7 +36,6 @@ spec:
   azure:
     application:
       enabled: true
-      tenant: {{tenant}}
   accessPolicy:
     inbound:
       rules:
@@ -54,24 +52,10 @@ spec:
         - application: vedtaksfeed
         - application: spesialist
         - application: spanner
-        {{#each accessPolicy.inbound.rules }}
-        - application: {{application}}
-        {{/each }}
     outbound:
       rules:
         - application: logging
           namespace: nais-system
-      external:
-        - host: {{pdlHostname}}
   valkey:
     - instance: mellomlager
       access: readwrite
-  ingresses:
-    {{#each ingresses }}
-    - "{{this}}"
-    {{/each}}
-  env:
-    - name: PDL_URL
-      value: https://{{pdlHostname}}/graphql
-    - name: PDL_SCOPE
-      value: {{pdlScope}}

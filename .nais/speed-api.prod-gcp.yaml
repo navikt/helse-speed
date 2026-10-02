@@ -1,0 +1,16 @@
+spec:
+  azure:
+    application:
+      tenant: nav.no
+  accessPolicy:
+    outbound:
+      external:
+        - host: pdl-api.prod-fss-pub.nais.io
+  ingresses:
+    - "https://speed.ansatt.nav.no"
+    - "https://speed.intern.nav.no"
+  env:
+    - name: PDL_URL
+      value: https://pdl-api.prod-fss-pub.nais.io/graphql
+    - name: PDL_SCOPE
+      value: api://prod-fss.pdl.pdl-api/.default

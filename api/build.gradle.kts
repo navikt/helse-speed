@@ -1,32 +1,33 @@
-val tbdLibsVersion: String by project
-val jedisVersion = "5.1.0"
-val logbackClassicVersion = "1.6.4"
-val logbackEncoderVersion = "8.0"
-val jacksonVersion = "2.22.3"
-val ktorVersion = "3.6.0" // bør være samme som i <com.github.navikt.tbd-libs:naisful-app>
-val mockKVersion = "1.14.11"
+plugins {
+    id("no.nav.sykepenger.deployable")
+}
+
+sykepengerDeployable {
+    mainClass = "no.nav.helse.speed.api.AppKt"
+    imageName = "helse-speed-api"
+}
 
 dependencies {
-    api("ch.qos.logback:logback-classic:$logbackClassicVersion")
-    api("net.logstash.logback:logstash-logback-encoder:$logbackEncoderVersion")
+    api(libs.logback.classic)
+    api(libs.logstash.logback.encoder)
 
-    api("redis.clients:jedis:$jedisVersion")
+    api(libs.jedis)
 
-    api("io.ktor:ktor-server-auth:$ktorVersion")
-    api("io.ktor:ktor-server-auth-jwt:$ktorVersion") {
+    api(libs.ktor.server.auth)
+    api(libs.ktor.server.auth.jwt) {
         exclude(group = "junit")
     }
 
-    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
+    api(libs.jackson.datatype.jsr310)
 
-    api("com.github.navikt.tbd-libs:naisful-app:$tbdLibsVersion")
-    api("com.github.navikt.tbd-libs:azure-token-client-default:$tbdLibsVersion")
+    api(libs.tbdLibs.naisfulApp)
+    api(libs.tbdLibs.azureTokenClientDefault)
 
-    testImplementation("com.github.navikt.tbd-libs:naisful-test-app:$tbdLibsVersion")
-    testImplementation("com.github.navikt.tbd-libs:mock-http-client:$tbdLibsVersion")
-    testImplementation("io.mockk:mockk:$mockKVersion")
+    testImplementation(libs.tbdLibs.naisfulTestApp)
+    testImplementation(libs.tbdLibs.mockHttpClient)
+    testImplementation(libs.mockk)
 
-    testImplementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+    testImplementation(libs.ktor.client.contentNegotiation)
 }
 
 tasks {

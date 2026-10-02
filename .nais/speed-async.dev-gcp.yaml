@@ -1,0 +1,6 @@
+spec:
+  kafka:
+    pool: nav-dev
+  azure:
+    application:
+      tenant: trygdeetaten.no

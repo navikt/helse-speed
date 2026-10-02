@@ -1,0 +1,6 @@
+spec:
+  kafka:
+    pool: nav-prod
+  azure:
+    application:
+      tenant: nav.no

@@ -7,10 +7,10 @@ updates:
       prefix: "⬆️ "
     schedule:
       interval: "daily"
-      time: "09:00"
-      timezone: "Europe/Oslo"
     cooldown:
       default-days: 7
+      exclude:
+        - "navikt/sykepenger-github-workflows*"
 
   # Maintain dependencies for gradle
   - package-ecosystem: "gradle"
@@ -19,9 +19,8 @@ updates:
       prefix: "⬆️ "
     schedule:
       interval: "daily"
-      time: "09:00"
-      timezone: "Europe/Oslo"
     cooldown:
       default-days: 7
       exclude:
+        - "no.nav.sykepenger.*"
         - "com.github.navikt.tbd-libs:*"

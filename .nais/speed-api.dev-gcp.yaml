@@ -1,0 +1,19 @@
+spec:
+  azure:
+    application:
+      tenant: trygdeetaten.no
+  accessPolicy:
+    inbound:
+      rules:
+        - application: spleis-testdata
+    outbound:
+      external:
+        - host: pdl-api.dev-fss-pub.nais.io
+  ingresses:
+    - "https://speed.ansatt.dev.nav.no"
+    - "https://speed.intern.dev.nav.no"
+  env:
+    - name: PDL_URL
+      value: https://pdl-api.dev-fss-pub.nais.io/graphql
+    - name: PDL_SCOPE
+      value: api://dev-fss.pdl.pdl-api/.default

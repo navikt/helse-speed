@@ -1,4 +1,6 @@
-build/
 .gradle/
 .idea/
 .kotlin/
+build/
+out/
+.DS_Store

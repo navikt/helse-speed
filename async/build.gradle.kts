@@ -1,16 +1,20 @@
-val rapidsAndRiversVersion = "2026091610031789545782"
-val tbdLibsVersion: String by project
-val mockkVersion = "1.14.11"
-val avroVersion = "1.12.2"
+plugins {
+    id("no.nav.sykepenger.deployable")
+}
+
+sykepengerDeployable {
+    mainClass = "no.nav.helse.speed.async.AppKt"
+    imageName = "helse-speed-async"
+}
 
 dependencies {
-    api("com.github.navikt:rapids-and-rivers:$rapidsAndRiversVersion")
-    api("com.github.navikt.tbd-libs:azure-token-client-default:$tbdLibsVersion")
-    api("com.github.navikt.tbd-libs:speed-client:$tbdLibsVersion")
+    api(libs.rapidsAndRivers)
+    api(libs.tbdLibs.azureTokenClientDefault)
+    api(libs.tbdLibs.speedClient)
 
-    api("org.apache.avro:avro:$avroVersion")
+    api(libs.avro)
 
-    testImplementation("com.github.navikt.tbd-libs:rapids-and-rivers-test:$tbdLibsVersion")
-    testImplementation("com.github.navikt.tbd-libs:mock-http-client:$tbdLibsVersion")
-    testImplementation("io.mockk:mockk:$mockkVersion")
+    testImplementation(libs.tbdLibs.rapidsAndRiversTest)
+    testImplementation(libs.tbdLibs.mockHttpClient)
+    testImplementation(libs.mockk)
 }
