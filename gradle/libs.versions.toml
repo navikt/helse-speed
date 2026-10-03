@@ -1,5 +1,5 @@
 [versions]
-tbdLibs = "20260821.0852"
+tbdLibs = "20261002.1227"
 sykepengerGradlePlugins = "20261001.1830"
 
 [libraries]
@@ -10,7 +10,7 @@ ktor-client-contentNegotiation = { module = "io.ktor:ktor-client-content-negotia
 ktor-server-auth = { module = "io.ktor:ktor-server-auth" }
 ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt" }
 logback-classic = "ch.qos.logback:logback-classic:1.6.4"
-logstash-logback-encoder = "net.logstash.logback:logstash-logback-encoder:8.0"
+logstash-logback-encoder = "net.logstash.logback:logstash-logback-encoder:9.0"
 mockk = "io.mockk:mockk:1.14.11"
 rapidsAndRivers = "com.github.navikt:rapids-and-rivers:2026091610031789545782"
 tbdLibs-azureTokenClientDefault = { module = "com.github.navikt.tbd-libs:azure-token-client-default", version.ref = "tbdLibs" }
