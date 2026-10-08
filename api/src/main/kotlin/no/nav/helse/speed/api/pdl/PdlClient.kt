@@ -39,7 +39,8 @@ class PdlClient(
                     true -> NotFound
                     false -> Ok(
                         PdlPersoninfo(
-                            fødselsdato = person.value.foedselsdato.first().foedselsdato,
+                            // PDL kan returnere innslag uten fødselsdato (f.eks. kun fødselsår)
+                            fødselsdato = person.value.foedselsdato.firstNotNullOf { it.foedselsdato },
                             // foretrekker PDL dersom flere innslag
                             dødsdato = person.value.doedsfall.firstOrNull { it.metadata.master.lowercase() == "pdl" }?.doedsdato
                                 ?: person.value.doedsfall.firstOrNull()?.doedsdato,
@@ -308,7 +309,7 @@ data class PdlPersonInfoDto(
 ) {
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class Fødselsdato(
-        val foedselsdato: LocalDate
+        val foedselsdato: LocalDate?
     )
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class Navn(
