@@ -6,20 +6,20 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.callid.callId
-import io.ktor.server.request.receiveNullable
+import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
-import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResponse.*
+import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResponse.Vergemål
 import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResponse.Vergemåltype
 import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt
 import java.time.LocalDate
 
 fun Route.api(identtjeneste: Identtjeneste) {
     post("/api/person") {
-        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
+        val request = call.receive<IdentRequest?>() ?: throw BadRequestException("Mangler ident")
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
         when (val svar = identtjeneste.hentPerson(request.ident, callId)) {
             is Result.Error -> throw Exception(svar.error, svar.cause)
@@ -60,7 +60,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
     }
     route("/api/ident") {
         post {
-            val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
+            val request = call.receive<IdentRequest?>() ?: throw BadRequestException("Mangler ident")
             val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
 
             when (val svar = identtjeneste.hentFødselsnummerOgAktørId(request.ident, callId)) {
@@ -87,7 +87,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
         }
 
         delete {
-            val request = call.receiveNullable<SlettIdentRequest>() ?: throw BadRequestException("Mangler identer")
+            val request = call.receive<SlettIdentRequest?>() ?: throw BadRequestException("Mangler identer")
             when (val svar = identtjeneste.tømFraMellomlager(request.identer)) {
                 SlettResultat.Ok -> call.respond(HttpStatusCode.OK, SlettResponse("OK"))
                 is SlettResultat.Feilmelding -> throw Exception(svar.melding, svar.årsak)
@@ -95,7 +95,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
         }
     }
     post("/api/alle_identer") {
-        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
+        val request = call.receive<IdentRequest?>() ?: throw BadRequestException("Mangler ident")
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
 
         when (val svar = identtjeneste.hentAlleIdenter(request.ident, callId)) {
@@ -131,7 +131,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
         }
     }
     post("/api/historiske_identer") {
-        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
+        val request = call.receive<IdentRequest?>() ?: throw BadRequestException("Mangler ident")
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
 
         when (val svar = identtjeneste.hentHistoriskeFolkeregisterIdenter(request.ident, callId)) {
@@ -155,7 +155,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
         }
     }
     post("/api/vergemål_eller_fremtidsfullmakt") {
-        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
+        val request = call.receive<IdentRequest?>() ?: throw BadRequestException("Mangler ident")
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
 
         when (val svar = identtjeneste.hentVergemålEllerFremtidsfullmakt(request.ident, callId)) {
@@ -195,7 +195,7 @@ fun Route.api(identtjeneste: Identtjeneste) {
     }
 
     post("/api/geografisk_tilknytning") {
-        val request = call.receiveNullable<IdentRequest>() ?: throw BadRequestException("Mangler ident")
+        val request = call.receive<IdentRequest?>() ?: throw BadRequestException("Mangler ident")
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
 
         when (val svar = identtjeneste.hentGeografiskTilknytning(request.ident, callId)) {
