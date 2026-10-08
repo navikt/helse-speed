@@ -40,10 +40,14 @@ class PdlResponseTest {
         val gtType: GeografiskTilknytningType,
         val gtKommune: String?,
         val gtBydel: String?,
-        val gtLand: String?
+        val gtLand: String?,
     ) {
         enum class GeografiskTilknytningType {
-            BYDEL, KOMMUNE, UTLAND, @JsonEnumDefaultValue UDEFINERT
+            BYDEL,
+            KOMMUNE,
+            UTLAND,
+
+            @JsonEnumDefaultValue UDEFINERT,
         }
     }
 }

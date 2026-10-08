@@ -85,22 +85,24 @@ class PdlClientGeografiskTilknytningTest {
         return (resultat as PdlResultat.Ok).value
     }
 
-    private fun hentGeografiskTilknytning(body: String) =
-        pdlClient(body).hentGeografiskTilknytning("12345678911", "en-call-id").getOrThrow()
+    private fun hentGeografiskTilknytning(body: String) = pdlClient(body).hentGeografiskTilknytning("12345678911", "en-call-id").getOrThrow()
 
-    private fun pdlClient(body: String) = PdlClient(
-        baseUrl = "http://pdl",
-        accessTokenClient = mockk<AzureTokenProvider> {
-            every { bearerToken(any()) } returns AzureToken("et token", LocalDateTime.MAX).ok()
-        },
-        accessTokenScope = "et scope",
-        objectMapper = objectMapper,
-        httpClient = mockk<HttpClient> {
-            every {
-                send(any<HttpRequest>(), any<HttpResponse.BodyHandler<String>>())
-            } returns MockHttpResponse(body, 200)
-        }
-    )
+    private fun pdlClient(body: String) =
+        PdlClient(
+            baseUrl = "http://pdl",
+            accessTokenClient =
+                mockk<AzureTokenProvider> {
+                    every { bearerToken(any()) } returns AzureToken("et token", LocalDateTime.MAX).ok()
+                },
+            accessTokenScope = "et scope",
+            objectMapper = objectMapper,
+            httpClient =
+                mockk<HttpClient> {
+                    every {
+                        send(any<HttpRequest>(), any<HttpResponse.BodyHandler<String>>())
+                    } returns MockHttpResponse(body, 200)
+                },
+        )
 }
 
 @Language("JSON")

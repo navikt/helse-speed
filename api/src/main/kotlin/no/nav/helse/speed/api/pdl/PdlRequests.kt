@@ -1,6 +1,10 @@
 package no.nav.helse.speed.api.pdl
 
-private fun lastSkjema(sti: String) = PdlQueryObject::class.java.getResource(sti)!!.readText().replace(Regex("[\n\r]"), "")
+private fun lastSkjema(sti: String) =
+    PdlQueryObject::class.java
+        .getResource(sti)!!
+        .readText()
+        .replace(Regex("[\n\r]"), "")
 
 private val hentIdenterQuery = lastSkjema("/pdl/hentIdenter.graphql")
 private val hentPersonQuery = lastSkjema("/pdl/hentPerson.graphql")
@@ -9,36 +13,44 @@ private val hentGeografiskTilknytning = lastSkjema("/pdl/hentGeografiskTilknytni
 
 data class PdlQueryObject(
     val query: String,
-    val variables: Map<String, Any>
+    val variables: Map<String, Any>,
 )
 
-fun hentIdenterQuery(ident: String, historikk: Boolean) =
-    PdlQueryObject(
-        query = hentIdenterQuery,
-        variables = mapOf(
+fun hentIdenterQuery(
+    ident: String,
+    historikk: Boolean,
+) = PdlQueryObject(
+    query = hentIdenterQuery,
+    variables =
+        mapOf(
             "ident" to ident,
-            "historikk" to historikk
-        )
-    )
+            "historikk" to historikk,
+        ),
+)
 
 fun hentPersonQuery(ident: String) =
     PdlQueryObject(
         query = hentPersonQuery,
-        variables = mapOf(
-            "ident" to ident
-        )
+        variables =
+            mapOf(
+                "ident" to ident,
+            ),
     )
+
 fun hentVergemålQuery(ident: String) =
     PdlQueryObject(
         query = hentVergemål,
-        variables = mapOf(
-            "ident" to ident
-        )
+        variables =
+            mapOf(
+                "ident" to ident,
+            ),
     )
+
 fun hentGeografiskTilknytningQuery(ident: String) =
     PdlQueryObject(
         query = hentGeografiskTilknytning,
-        variables = mapOf(
-            "ident" to ident
-        )
+        variables =
+            mapOf(
+                "ident" to ident,
+            ),
     )

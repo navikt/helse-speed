@@ -50,17 +50,20 @@ class PdlClientFeilhåndteringTest {
         return assertInstanceOf(Result.Error::class.java, resultat)
     }
 
-    private fun pdlClient(exception: Exception) = PdlClient(
-        baseUrl = "http://pdl",
-        accessTokenClient = mockk<AzureTokenProvider> {
-            every { bearerToken(any()) } returns AzureToken("et token", LocalDateTime.MAX).ok()
-        },
-        accessTokenScope = "et scope",
-        objectMapper = objectMapper,
-        httpClient = mockk<HttpClient> {
-            every {
-                send(any<HttpRequest>(), any<HttpResponse.BodyHandler<String>>())
-            } throws exception
-        }
-    )
+    private fun pdlClient(exception: Exception) =
+        PdlClient(
+            baseUrl = "http://pdl",
+            accessTokenClient =
+                mockk<AzureTokenProvider> {
+                    every { bearerToken(any()) } returns AzureToken("et token", LocalDateTime.MAX).ok()
+                },
+            accessTokenScope = "et scope",
+            objectMapper = objectMapper,
+            httpClient =
+                mockk<HttpClient> {
+                    every {
+                        send(any<HttpRequest>(), any<HttpResponse.BodyHandler<String>>())
+                    } throws exception
+                },
+        )
 }

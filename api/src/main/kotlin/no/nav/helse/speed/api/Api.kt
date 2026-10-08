@@ -23,31 +23,39 @@ fun Route.api(identtjeneste: Identtjeneste) {
         val callId = call.callId ?: throw BadRequestException("Mangler callId-header")
         when (val svar = identtjeneste.hentPerson(request.ident, callId)) {
             is Result.Error -> throw Exception(svar.error, svar.cause)
-            is Result.Ok -> when (val person = svar.value) {
-                PersonResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
-                is PersonResultat.Person -> call.respond(HttpStatusCode.OK, PersonResponse(
-                    fødselsdato = person.fødselsdato,
-                    dødsdato = person.dødsdato,
-                    fornavn = person.fornavn,
-                    mellomnavn = person.mellomnavn,
-                    etternavn = person.etternavn,
-                    adressebeskyttelse = when (person.adressebeskyttelse) {
-                        PersonResultat.Person.Adressebeskyttelse.FORTROLIG -> PersonResponse.Adressebeskyttelse.FORTROLIG
-                        PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG -> PersonResponse.Adressebeskyttelse.STRENGT_FORTROLIG
-                        PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND -> PersonResponse.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
-                        PersonResultat.Person.Adressebeskyttelse.UGRADERT -> PersonResponse.Adressebeskyttelse.UGRADERT
-                    },
-                    kjønn = when (person.kjønn) {
-                        PersonResultat.Person.Kjønn.MANN -> PersonResponse.Kjønn.MANN
-                        PersonResultat.Person.Kjønn.KVINNE -> PersonResponse.Kjønn.KVINNE
-                        PersonResultat.Person.Kjønn.UKJENT -> PersonResponse.Kjønn.UKJENT
-                    },
-                    kilde = when (person.kilde) {
-                        Kilde.CACHE -> KildeResponse.CACHE
-                        Kilde.PDL -> KildeResponse.PDL
-                    }
-                ))
-            }
+            is Result.Ok ->
+                when (val person = svar.value) {
+                    PersonResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
+                    is PersonResultat.Person ->
+                        call.respond(
+                            HttpStatusCode.OK,
+                            PersonResponse(
+                                fødselsdato = person.fødselsdato,
+                                dødsdato = person.dødsdato,
+                                fornavn = person.fornavn,
+                                mellomnavn = person.mellomnavn,
+                                etternavn = person.etternavn,
+                                adressebeskyttelse =
+                                    when (person.adressebeskyttelse) {
+                                        PersonResultat.Person.Adressebeskyttelse.FORTROLIG -> PersonResponse.Adressebeskyttelse.FORTROLIG
+                                        PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG -> PersonResponse.Adressebeskyttelse.STRENGT_FORTROLIG
+                                        PersonResultat.Person.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND -> PersonResponse.Adressebeskyttelse.STRENGT_FORTROLIG_UTLAND
+                                        PersonResultat.Person.Adressebeskyttelse.UGRADERT -> PersonResponse.Adressebeskyttelse.UGRADERT
+                                    },
+                                kjønn =
+                                    when (person.kjønn) {
+                                        PersonResultat.Person.Kjønn.MANN -> PersonResponse.Kjønn.MANN
+                                        PersonResultat.Person.Kjønn.KVINNE -> PersonResponse.Kjønn.KVINNE
+                                        PersonResultat.Person.Kjønn.UKJENT -> PersonResponse.Kjønn.UKJENT
+                                    },
+                                kilde =
+                                    when (person.kilde) {
+                                        Kilde.CACHE -> KildeResponse.CACHE
+                                        Kilde.PDL -> KildeResponse.PDL
+                                    },
+                            ),
+                        )
+                }
         }
     }
     route("/api/ident") {
@@ -57,18 +65,24 @@ fun Route.api(identtjeneste: Identtjeneste) {
 
             when (val svar = identtjeneste.hentFødselsnummerOgAktørId(request.ident, callId)) {
                 is Result.Error -> throw Exception(svar.error, svar.cause)
-                is Result.Ok -> when (val identer = svar.value) {
-                    IdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
-                    is IdenterResultat.Identer -> call.respond(HttpStatusCode.OK, IdentResponse(
-                        fødselsnummer = identer.fødselsnummer,
-                        aktørId = identer.aktørId,
-                        npid = identer.npid,
-                        kilde = when (identer.kilde) {
-                            Kilde.CACHE -> KildeResponse.CACHE
-                            Kilde.PDL -> KildeResponse.PDL
-                        }
-                    ))
-                }
+                is Result.Ok ->
+                    when (val identer = svar.value) {
+                        IdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
+                        is IdenterResultat.Identer ->
+                            call.respond(
+                                HttpStatusCode.OK,
+                                IdentResponse(
+                                    fødselsnummer = identer.fødselsnummer,
+                                    aktørId = identer.aktørId,
+                                    npid = identer.npid,
+                                    kilde =
+                                        when (identer.kilde) {
+                                            Kilde.CACHE -> KildeResponse.CACHE
+                                            Kilde.PDL -> KildeResponse.PDL
+                                        },
+                                ),
+                            )
+                    }
             }
         }
 
@@ -86,26 +100,34 @@ fun Route.api(identtjeneste: Identtjeneste) {
 
         when (val svar = identtjeneste.hentAlleIdenter(request.ident, callId)) {
             is Result.Error -> throw Exception(svar.error, svar.cause)
-            is Result.Ok -> when (val identer = svar.value) {
-                AlleIdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
-                is AlleIdenterResultat.Identer -> call.respond(HttpStatusCode.OK, AlleIdenterResponse(
-                    identer = identer.identer.map {
-                        AlleIdenterResponse.Ident(
-                            ident = it.ident,
-                            type = when (it.type) {
-                                AlleIdenterResultat.IdentType.FOLKEREGISTERIDENT -> AlleIdenterResponse.IdentType.FOLKEREGISTERIDENT
-                                AlleIdenterResultat.IdentType.AKTORID -> AlleIdenterResponse.IdentType.AKTORID
-                                AlleIdenterResultat.IdentType.NPID -> AlleIdenterResponse.IdentType.NPID
-                            },
-                            gjeldende = it.gjeldende
+            is Result.Ok ->
+                when (val identer = svar.value) {
+                    AlleIdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
+                    is AlleIdenterResultat.Identer ->
+                        call.respond(
+                            HttpStatusCode.OK,
+                            AlleIdenterResponse(
+                                identer =
+                                    identer.identer.map {
+                                        AlleIdenterResponse.Ident(
+                                            ident = it.ident,
+                                            type =
+                                                when (it.type) {
+                                                    AlleIdenterResultat.IdentType.FOLKEREGISTERIDENT -> AlleIdenterResponse.IdentType.FOLKEREGISTERIDENT
+                                                    AlleIdenterResultat.IdentType.AKTORID -> AlleIdenterResponse.IdentType.AKTORID
+                                                    AlleIdenterResultat.IdentType.NPID -> AlleIdenterResponse.IdentType.NPID
+                                                },
+                                            gjeldende = it.gjeldende,
+                                        )
+                                    },
+                                kilde =
+                                    when (identer.kilde) {
+                                        Kilde.CACHE -> KildeResponse.CACHE
+                                        Kilde.PDL -> KildeResponse.PDL
+                                    },
+                            ),
                         )
-                    },
-                    kilde = when (identer.kilde) {
-                        Kilde.CACHE -> KildeResponse.CACHE
-                        Kilde.PDL -> KildeResponse.PDL
-                    }
-                ))
-            }
+                }
         }
     }
     post("/api/historiske_identer") {
@@ -114,16 +136,22 @@ fun Route.api(identtjeneste: Identtjeneste) {
 
         when (val svar = identtjeneste.hentHistoriskeFolkeregisterIdenter(request.ident, callId)) {
             is Result.Error -> throw Exception(svar.error, svar.cause)
-            is Result.Ok -> when (val identer = svar.value) {
-                HistoriskeIdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
-                is HistoriskeIdenterResultat.Identer -> call.respond(HttpStatusCode.OK, IdenterResponse(
-                    fødselsnumre = identer.fødselsnumre,
-                    kilde = when (identer.kilde) {
-                        Kilde.CACHE -> KildeResponse.CACHE
-                        Kilde.PDL -> KildeResponse.PDL
-                    }
-                ))
-            }
+            is Result.Ok ->
+                when (val identer = svar.value) {
+                    HistoriskeIdenterResultat.FantIkkeIdenter -> throw NotFoundException("Fant ikke ident")
+                    is HistoriskeIdenterResultat.Identer ->
+                        call.respond(
+                            HttpStatusCode.OK,
+                            IdenterResponse(
+                                fødselsnumre = identer.fødselsnumre,
+                                kilde =
+                                    when (identer.kilde) {
+                                        Kilde.CACHE -> KildeResponse.CACHE
+                                        Kilde.PDL -> KildeResponse.PDL
+                                    },
+                            ),
+                        )
+                }
         }
     }
     post("/api/vergemål_eller_fremtidsfullmakt") {
@@ -132,29 +160,37 @@ fun Route.api(identtjeneste: Identtjeneste) {
 
         when (val svar = identtjeneste.hentVergemålEllerFremtidsfullmakt(request.ident, callId)) {
             is Result.Error -> throw Exception(svar.error, svar.cause)
-            is Result.Ok -> when (val vergemål = svar.value) {
-                VergemålEllerFremtidsfullmaktResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
-                is VergemålEllerFremtidsfullmakt -> call.respond(HttpStatusCode.OK, VergemålEllerFremtidsfullmaktResponse(
-                    vergemålEllerFremtidsfullmakter = vergemål.vergemålEllerFremtidsfullmakter.map {
-                        Vergemål(
-                            type = when (it.type) {
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.ENSLIG_MINDREÅRIG_ASYLSØKER -> Vergemåltype.ENSLIG_MINDREÅRIG_ASYLSØKER
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.ENSLIG_MINDREÅRIG_FLYKTNING -> Vergemåltype.ENSLIG_MINDREÅRIG_FLYKTNING
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.VOKSEN -> Vergemåltype.VOKSEN
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.MIDLERTIDIG_FOR_VOKSEN -> Vergemåltype.MIDLERTIDIG_FOR_VOKSEN
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.MINDREÅRIG -> Vergemåltype.MINDREÅRIG
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG -> Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.FORVALTNING_UTENFOR_VERGEMÅL -> Vergemåltype.FORVALTNING_UTENFOR_VERGEMÅL
-                                VergemålEllerFremtidsfullmakt.Vergemåltype.STADFESTET_FREMTIDSFULLMAKT -> Vergemåltype.STADFESTET_FREMTIDSFULLMAKT
-                            }
+            is Result.Ok ->
+                when (val vergemål = svar.value) {
+                    VergemålEllerFremtidsfullmaktResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
+                    is VergemålEllerFremtidsfullmakt ->
+                        call.respond(
+                            HttpStatusCode.OK,
+                            VergemålEllerFremtidsfullmaktResponse(
+                                vergemålEllerFremtidsfullmakter =
+                                    vergemål.vergemålEllerFremtidsfullmakter.map {
+                                        Vergemål(
+                                            type =
+                                                when (it.type) {
+                                                    VergemålEllerFremtidsfullmakt.Vergemåltype.ENSLIG_MINDREÅRIG_ASYLSØKER -> Vergemåltype.ENSLIG_MINDREÅRIG_ASYLSØKER
+                                                    VergemålEllerFremtidsfullmakt.Vergemåltype.ENSLIG_MINDREÅRIG_FLYKTNING -> Vergemåltype.ENSLIG_MINDREÅRIG_FLYKTNING
+                                                    VergemålEllerFremtidsfullmakt.Vergemåltype.VOKSEN -> Vergemåltype.VOKSEN
+                                                    VergemålEllerFremtidsfullmakt.Vergemåltype.MIDLERTIDIG_FOR_VOKSEN -> Vergemåltype.MIDLERTIDIG_FOR_VOKSEN
+                                                    VergemålEllerFremtidsfullmakt.Vergemåltype.MINDREÅRIG -> Vergemåltype.MINDREÅRIG
+                                                    VergemålEllerFremtidsfullmakt.Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG -> Vergemåltype.MIDLERTIDIG_FOR_MINDREÅRIG
+                                                    VergemålEllerFremtidsfullmakt.Vergemåltype.FORVALTNING_UTENFOR_VERGEMÅL -> Vergemåltype.FORVALTNING_UTENFOR_VERGEMÅL
+                                                    VergemålEllerFremtidsfullmakt.Vergemåltype.STADFESTET_FREMTIDSFULLMAKT -> Vergemåltype.STADFESTET_FREMTIDSFULLMAKT
+                                                },
+                                        )
+                                    },
+                                kilde =
+                                    when (vergemål.kilde) {
+                                        Kilde.CACHE -> KildeResponse.CACHE
+                                        Kilde.PDL -> KildeResponse.PDL
+                                    },
+                            ),
                         )
-                    },
-                    kilde = when (vergemål.kilde) {
-                        Kilde.CACHE -> KildeResponse.CACHE
-                        Kilde.PDL -> KildeResponse.PDL
-                    }
-                ))
-            }
+                }
         }
     }
 
@@ -164,62 +200,82 @@ fun Route.api(identtjeneste: Identtjeneste) {
 
         when (val svar = identtjeneste.hentGeografiskTilknytning(request.ident, callId)) {
             is Result.Error -> throw Exception(svar.error, svar.cause)
-            is Result.Ok -> when (val geografiskTilknytning = svar.value) {
-                GeografiskTilknytningResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
-                is GeografiskTilknytningResultat.GeografiskTilknytning -> call.respond(HttpStatusCode.OK, GeografiskTilknytningResponse(
-                    type = when (geografiskTilknytning.type) {
-                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.BYDEL -> GeografiskTilknytningResponse.GeografiskTilknytningType.BYDEL
-                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.KOMMUNE -> GeografiskTilknytningResponse.GeografiskTilknytningType.KOMMUNE
-                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UTLAND -> GeografiskTilknytningResponse.GeografiskTilknytningType.UTLAND
-                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UTLAND_UKJENT -> GeografiskTilknytningResponse.GeografiskTilknytningType.UTLAND_UKJENT
-                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UDEFINERT -> GeografiskTilknytningResponse.GeografiskTilknytningType.UDEFINERT
-                    },
-                    land = geografiskTilknytning.land,
-                    kommune = geografiskTilknytning.kommune,
-                    bydel = geografiskTilknytning.bydel,
-                    kilde = when (geografiskTilknytning.kilde) {
-                        Kilde.CACHE -> KildeResponse.CACHE
-                        Kilde.PDL -> KildeResponse.PDL
-                    }
-                ))
-            }
+            is Result.Ok ->
+                when (val geografiskTilknytning = svar.value) {
+                    GeografiskTilknytningResultat.FantIkkePerson -> throw NotFoundException("Fant ikke ident")
+                    is GeografiskTilknytningResultat.GeografiskTilknytning ->
+                        call.respond(
+                            HttpStatusCode.OK,
+                            GeografiskTilknytningResponse(
+                                type =
+                                    when (geografiskTilknytning.type) {
+                                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.BYDEL -> GeografiskTilknytningResponse.GeografiskTilknytningType.BYDEL
+                                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.KOMMUNE -> GeografiskTilknytningResponse.GeografiskTilknytningType.KOMMUNE
+                                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UTLAND -> GeografiskTilknytningResponse.GeografiskTilknytningType.UTLAND
+                                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UTLAND_UKJENT -> GeografiskTilknytningResponse.GeografiskTilknytningType.UTLAND_UKJENT
+                                        GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UDEFINERT -> GeografiskTilknytningResponse.GeografiskTilknytningType.UDEFINERT
+                                    },
+                                land = geografiskTilknytning.land,
+                                kommune = geografiskTilknytning.kommune,
+                                bydel = geografiskTilknytning.bydel,
+                                kilde =
+                                    when (geografiskTilknytning.kilde) {
+                                        Kilde.CACHE -> KildeResponse.CACHE
+                                        Kilde.PDL -> KildeResponse.PDL
+                                    },
+                            ),
+                        )
+                }
         }
     }
-
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class IdentRequest(val ident: String)
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class SlettIdentRequest(val identer: List<String>)
+data class IdentRequest(
+    val ident: String,
+)
 
-data class SlettResponse(val status: String)
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SlettIdentRequest(
+    val identer: List<String>,
+)
+
+data class SlettResponse(
+    val status: String,
+)
 
 data class IdenterResponse(
     val fødselsnumre: List<String>,
-    val kilde: KildeResponse
+    val kilde: KildeResponse,
 )
+
 data class AlleIdenterResponse(
     val identer: List<Ident>,
-    val kilde: KildeResponse
+    val kilde: KildeResponse,
 ) {
     data class Ident(
         val ident: String,
         val type: IdentType,
-        val gjeldende: Boolean
+        val gjeldende: Boolean,
     )
+
     enum class IdentType {
-        FOLKEREGISTERIDENT, AKTORID, NPID
+        FOLKEREGISTERIDENT,
+        AKTORID,
+        NPID,
     }
 }
+
 data class IdentResponse(
     val fødselsnummer: String,
     val aktørId: String,
     val npid: String?,
-    val kilde: KildeResponse
+    val kilde: KildeResponse,
 )
+
 enum class KildeResponse {
-    CACHE, PDL
+    CACHE,
+    PDL,
 }
 
 data class PersonResponse(
@@ -230,23 +286,30 @@ data class PersonResponse(
     val etternavn: String,
     val adressebeskyttelse: Adressebeskyttelse,
     val kjønn: Kjønn,
-    val kilde: KildeResponse
+    val kilde: KildeResponse,
 ) {
     enum class Adressebeskyttelse {
-        FORTROLIG, STRENGT_FORTROLIG, STRENGT_FORTROLIG_UTLAND, UGRADERT
+        FORTROLIG,
+        STRENGT_FORTROLIG,
+        STRENGT_FORTROLIG_UTLAND,
+        UGRADERT,
     }
+
     enum class Kjønn {
-        MANN, KVINNE, UKJENT
+        MANN,
+        KVINNE,
+        UKJENT,
     }
 }
 
 data class VergemålEllerFremtidsfullmaktResponse(
     val vergemålEllerFremtidsfullmakter: List<Vergemål>,
-    val kilde: KildeResponse
+    val kilde: KildeResponse,
 ) {
     data class Vergemål(
-        val type: Vergemåltype
+        val type: Vergemåltype,
     )
+
     enum class Vergemåltype {
         ENSLIG_MINDREÅRIG_ASYLSØKER,
         ENSLIG_MINDREÅRIG_FLYKTNING,
@@ -255,7 +318,7 @@ data class VergemålEllerFremtidsfullmaktResponse(
         MINDREÅRIG,
         MIDLERTIDIG_FOR_MINDREÅRIG,
         FORVALTNING_UTENFOR_VERGEMÅL,
-        STADFESTET_FREMTIDSFULLMAKT
+        STADFESTET_FREMTIDSFULLMAKT,
     }
 }
 
@@ -264,9 +327,13 @@ data class GeografiskTilknytningResponse(
     val land: String?,
     val kommune: String?,
     val bydel: String?,
-    val kilde: KildeResponse
+    val kilde: KildeResponse,
 ) {
     enum class GeografiskTilknytningType {
-        BYDEL, KOMMUNE, UTLAND, UTLAND_UKJENT, UDEFINERT
+        BYDEL,
+        KOMMUNE,
+        UTLAND,
+        UTLAND_UKJENT,
+        UDEFINERT,
     }
 }

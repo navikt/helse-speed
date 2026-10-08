@@ -10,27 +10,30 @@ import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicBoolean
 
 class FolkeregisteridentifikatorRiver(
     private val consumer: KafkaConsumer<ByteArray, GenericRecord>,
-    private val speedClient: SpeedClient
+    private val speedClient: SpeedClient,
 ) {
     private val latch = CountDownLatch(1)
 
     init {
-        Runtime.getRuntime().addShutdownHook(Thread {
-            stop()
-        })
+        Runtime.getRuntime().addShutdownHook(
+            Thread {
+                stop()
+            },
+        )
     }
 
     fun isRunning() = latch.count == 1L
+
     fun await() = latch.await()
 
     fun stop() {
         try {
             consumer.wakeup()
-        } catch (err: Exception) { }
+        } catch (_: Exception) {
+        }
         latch.countDown()
     }
 
@@ -39,7 +42,7 @@ class FolkeregisteridentifikatorRiver(
             consumer.subscribe(listOf("pdl.leesah-v1"))
             while (isRunning()) {
                 val records = consumer.poll(Duration.ofMillis(100))
-                records.forEach { it ->
+                records.forEach {
                     val record = it.value()
                     val opplysningstype = record.get("opplysningstype").toString()
                     val callId = UUID.randomUUID().toString()
@@ -62,7 +65,10 @@ class FolkeregisteridentifikatorRiver(
         }
     }
 
-    private fun håndterFolkeregisteridentifikatorOpplysning(record: GenericRecord, callId: String) {
+    private fun håndterFolkeregisteridentifikatorOpplysning(
+        record: GenericRecord,
+        callId: String,
+    ) {
         sikkerlogg.info("mottok melding om folkeregisteridentifikator:\n$record")
         val folkeregisteridentifikator = record.get("Folkeregisteridentifikator")
         if (folkeregisteridentifikator !is GenericData.Record) return
@@ -70,21 +76,30 @@ class FolkeregisteridentifikatorRiver(
         tømMellomlager(record, ident, callId)
     }
 
-    private fun håndterGenerellOpplysning(opplysningstype: String, record: GenericRecord, callId: String) {
+    private fun håndterGenerellOpplysning(
+        opplysningstype: String,
+        record: GenericRecord,
+        callId: String,
+    ) {
         sikkerlogg.info("mottok melding om $opplysningstype:\n$record")
         tømMellomlager(record, null, callId)
     }
 
-    private fun tømMellomlager(record: GenericRecord, ident: String? = null, callId: String) {
+    private fun tømMellomlager(
+        record: GenericRecord,
+        ident: String? = null,
+        callId: String,
+    ) {
         val personidenter = record.get("personidenter")
 
-        val identer = buildList<String> {
-            if (personidenter is List<*>) personidenter.forEach { add("$it") }
-            if (ident != null) {
-                sikkerlogg.info("identen er i listen fra før: {}", any { it == ident }.toString())
-                add(ident)
+        val identer =
+            buildList<String> {
+                if (personidenter is List<*>) personidenter.forEach { add("$it") }
+                if (ident != null) {
+                    sikkerlogg.info("identen er i listen fra før: {}", any { it == ident }.toString())
+                    add(ident)
+                }
             }
-        }
         sikkerlogg.info("tømmer mellomlager for identene: $identer")
         speedClient.tømMellomlager(identer, callId)
     }
