@@ -3,15 +3,18 @@ package no.nav.helse.speed.api.pdl
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.map
 import com.github.navikt.tbd_libs.result_object.ok
-import no.nav.helse.speed.api.pdl.PdlResultat.*
+import no.nav.helse.speed.api.pdl.PdlResultat.BadRequest
+import no.nav.helse.speed.api.pdl.PdlResultat.GenericError
+import no.nav.helse.speed.api.pdl.PdlResultat.NotFound
+import no.nav.helse.speed.api.pdl.PdlResultat.Ok
 import org.slf4j.LoggerFactory
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.readValue
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -278,7 +281,7 @@ class PdlClient(
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class PdlResponse<T>(
     val errors: List<PdlError>?,
-    private val data: Map<String, T>,
+    private val data: Map<String, T?>,
 ) {
     val valueOrNull get() = data.values.singleOrNull()
 
