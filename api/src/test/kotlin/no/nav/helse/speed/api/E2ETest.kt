@@ -1,7 +1,5 @@
 package no.nav.helse.speed.api
 
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.naisful.NaisEndpoints
 import com.github.navikt.tbd_libs.naisful.test.TestContext
 import com.github.navikt.tbd_libs.naisful.test.naisfulTestApp
@@ -22,6 +20,7 @@ import no.nav.helse.speed.api.PersonResultat.Person.Adressebeskyttelse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.time.LocalDate
 
 class E2ETest {
@@ -118,7 +117,7 @@ class E2ETest {
                     api(identtjeneste)
                 }
             },
-            objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule()),
+            objectMapper = jacksonObjectMapper(),
             meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT),
             naisEndpoints = NaisEndpoints.Default,
             callIdHeaderName = "callId",

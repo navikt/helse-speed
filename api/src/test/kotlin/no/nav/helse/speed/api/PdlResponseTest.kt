@@ -1,9 +1,6 @@
 package no.nav.helse.speed.api
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import no.nav.helse.speed.api.PdlResponseTest.HentGeografiskTilknytning.GeografiskTilknytningType
 import no.nav.helse.speed.api.pdl.PdlResponse
 import org.intellij.lang.annotations.Language
@@ -11,9 +8,11 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import tools.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.readValue
 
 class PdlResponseTest {
-    private val objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule())
+    private val objectMapper = jacksonObjectMapper()
 
     @Test
     fun ok() {

@@ -1,9 +1,6 @@
 package no.nav.helse.speed.api
 
 import com.auth0.jwk.JwkProviderBuilder
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
 import com.github.navikt.tbd_libs.naisful.naisApp
 import io.ktor.server.application.ApplicationCall
@@ -23,15 +20,13 @@ import redis.clients.jedis.DefaultJedisClientConfig
 import redis.clients.jedis.HostAndPort
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPoolConfig
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.net.URI
 import java.time.Duration
 
 private val logg = LoggerFactory.getLogger(::main.javaClass)
 private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
-private val objectmapper =
-    jacksonObjectMapper()
-        .registerModules(JavaTimeModule())
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+private val objectmapper = jacksonObjectMapper()
 
 fun main() {
     Thread.currentThread().setUncaughtExceptionHandler { _, e ->

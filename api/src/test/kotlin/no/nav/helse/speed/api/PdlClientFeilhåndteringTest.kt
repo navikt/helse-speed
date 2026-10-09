@@ -1,7 +1,5 @@
 package no.nav.helse.speed.api
 
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.AzureToken
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.result_object.Result
@@ -14,6 +12,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.io.IOException
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -25,7 +24,7 @@ class PdlClientFeilhåndteringTest {
         private const val IDENT = "12345678911"
     }
 
-    private val objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule())
+    private val objectMapper = jacksonObjectMapper()
 
     @Test
     fun `tar vare på exception-type og melding når http-kallet feiler`() {

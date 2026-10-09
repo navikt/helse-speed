@@ -1,7 +1,5 @@
 package no.nav.helse.speed.async
 
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
 import com.github.navikt.tbd_libs.kafka.AivenConfig
 import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
@@ -12,8 +10,9 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.slf4j.LoggerFactory
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.net.http.HttpClient
-import java.util.Properties
+import java.util.*
 
 private val logg = LoggerFactory.getLogger("no.nav.helse.speed.async.App")
 private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
@@ -26,7 +25,7 @@ fun main() {
 
     val kafkaConfig = AivenConfig.default
     val consumerProducerFactory = ConsumerProducerFactory(kafkaConfig)
-    val speedClient = SpeedClient(httpClient, jacksonObjectMapper().registerModule(JavaTimeModule()), azure)
+    val speedClient = SpeedClient(httpClient, jacksonObjectMapper(), azure)
 
     val leesahConsumer =
         KafkaConsumer(

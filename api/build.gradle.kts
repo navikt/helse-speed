@@ -18,8 +18,6 @@ dependencies {
         exclude(group = "junit")
     }
 
-    api(libs.jackson.datatype.jsr310)
-
     api(libs.tbdLibs.naisfulApp)
     api(libs.tbdLibs.azureTokenClientDefault)
 

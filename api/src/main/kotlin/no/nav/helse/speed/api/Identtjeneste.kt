@@ -1,7 +1,5 @@
 package no.nav.helse.speed.api
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.map
@@ -10,12 +8,16 @@ import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytning
-import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.*
+import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.BYDEL
+import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.KOMMUNE
+import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UDEFINERT
+import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UTLAND
+import no.nav.helse.speed.api.GeografiskTilknytningResultat.GeografiskTilknytning.GeografiskTilknytningType.UTLAND_UKJENT
 import no.nav.helse.speed.api.IdenterResultat.FantIkkeIdenter
 import no.nav.helse.speed.api.IdenterResultat.Identer
-import no.nav.helse.speed.api.PersonResultat.*
-import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.*
-import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.*
+import no.nav.helse.speed.api.PersonResultat.Person
+import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt
+import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemål
 import no.nav.helse.speed.api.VergemålEllerFremtidsfullmaktResultat.VergemålEllerFremtidsfullmakt.Vergemåltype
 import no.nav.helse.speed.api.pdl.Ident
 import no.nav.helse.speed.api.pdl.PdlClient
@@ -26,6 +28,8 @@ import no.nav.helse.speed.api.pdl.PdlVergemålEllerFremtidsfullmakt
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.params.SetParams
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.readValue
 import java.security.MessageDigest
 import java.time.Duration
 import java.time.LocalDate
