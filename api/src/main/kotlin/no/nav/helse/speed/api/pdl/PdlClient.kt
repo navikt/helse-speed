@@ -55,9 +55,9 @@ class PdlClient(
                                 Ok(
                                     PdlPersoninfo(
                                         fødselsdato =
-                                            person.value.foedselsdato
-                                                .first()
-                                                .foedselsdato,
+                                            person.value
+                                                .foedselsdato
+                                                .firstNotNullOf { it.foedselsdato },
                                         // foretrekker PDL dersom flere innslag
                                         dødsdato =
                                             person.value.doedsfall
@@ -397,7 +397,7 @@ data class PdlPersonInfoDto(
 ) {
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class Fødselsdato(
-        val foedselsdato: LocalDate,
+        val foedselsdato: LocalDate?,
     )
 
     @JsonIgnoreProperties(ignoreUnknown = true)
