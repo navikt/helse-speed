@@ -1,6 +1,6 @@
 [versions]
 tbdLibs = "20261013.1613"
-sykepengerGradlePlugins = "20261013.1718"
+sykepengerGradlePlugins = "20261026.1611"
 
 [libraries]
 avro = "org.apache.avro:avro:1.12.2"
