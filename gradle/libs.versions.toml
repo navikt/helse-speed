@@ -11,7 +11,7 @@ ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt" }
 logback-classic = "ch.qos.logback:logback-classic:1.6.6"
 logstash-logback-encoder = "net.logstash.logback:logstash-logback-encoder:9.0"
 mockk = "io.mockk:mockk:1.14.11"
-rapidsAndRivers = "com.github.navikt:rapids-and-rivers:2026091610031789545782"
+rapidsAndRivers = "com.github.navikt:rapids-and-rivers:2026110308421793691732"
 tbdLibs-azureTokenClientDefault = { module = "com.github.navikt.tbd-libs:azure-token-client-default", version.ref = "tbdLibs" }
 tbdLibs-mockHttpClient = { module = "com.github.navikt.tbd-libs:mock-http-client", version.ref = "tbdLibs" }
 tbdLibs-naisfulApp = { module = "com.github.navikt.tbd-libs:naisful-app", version.ref = "tbdLibs" }
