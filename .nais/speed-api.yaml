@@ -11,6 +11,10 @@ spec:
   replicas:
     min: 2
     max: 12
+  startup:
+    path: /isalive
+    periodSeconds: 5
+    failureThreshold: 36
   liveness:
     path: /isalive
   readiness:
