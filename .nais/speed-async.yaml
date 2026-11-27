@@ -16,6 +16,10 @@ spec:
         topic: tbd.rapid.v1
         consumerGroup: tbd-speed-v1
         threshold: 200
+  startup:
+    path: /isalive
+    periodSeconds: 5
+    failureThreshold: 36
   liveness:
     path: /isalive
   readiness:
